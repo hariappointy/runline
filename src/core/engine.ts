@@ -107,8 +107,10 @@ export class ExecutionEngine {
         context.setProp(context.global, "__runline_invoke", actionBridge);
         actionBridge.dispose();
 
-        const pluginNames = this.registry.listPlugins().map((p) => p.name);
-        const source = buildExecutionSource(code, pluginNames);
+        const plugins = this.registry.listPlugins();
+        const pluginNames = plugins.map((p) => p.name);
+        const helpData = buildHelpData(plugins);
+        const source = buildExecutionSource(code, pluginNames, helpData);
 
         const evaluated = context.evalCode(source, "runline-sandbox.js");
         if (evaluated.error) {
@@ -294,9 +296,33 @@ function formatError(cause: unknown): string {
   return String(cause);
 }
 
+interface HelpEntry {
+  action: string;
+  description?: string;
+  inputs: Record<string, string>;
+}
+
+function buildHelpData(plugins: PluginDef[]): Record<string, HelpEntry[]> {
+  const data: Record<string, HelpEntry[]> = {};
+  for (const p of plugins) {
+    data[p.name] = p.actions.map((a) => ({
+      action: a.name,
+      description: a.description,
+      inputs: Object.fromEntries(
+        Object.entries(a.inputSchema ?? {}).map(([k, v]) => [
+          k,
+          `${v.type}${v.required ? " (required)" : ""}${v.description ? " — " + v.description : ""}`,
+        ]),
+      ),
+    }));
+  }
+  return data;
+}
+
 function buildExecutionSource(
   code: string,
   pluginNames: string[] = [],
+  helpData: Record<string, HelpEntry[]> = {},
 ): string {
   const trimmed = code.trim();
   const looksLikeArrow =
@@ -318,9 +344,15 @@ const __fmt = (v) => {
   try { return JSON.stringify(v); } catch { return String(v); }
 };
 
+const __help = ${JSON.stringify(helpData)};
+
 const __makeProxy = (path = []) => new Proxy(() => undefined, {
   get(_t, prop) {
     if (prop === 'then' || typeof prop === 'symbol') return undefined;
+    if (prop === 'help') {
+      const pluginName = path[0];
+      return () => pluginName && __help[pluginName] ? __help[pluginName] : __help;
+    }
     return __makeProxy([...path, String(prop)]);
   },
   apply(_t, _this, args) {
@@ -331,6 +363,7 @@ const __makeProxy = (path = []) => new Proxy(() => undefined, {
   },
 });
 const actions = __makeProxy();
+const help = () => __help;
 ${pluginNames.map((n) => `const ${n} = __makeProxy(['${n}']);`).join("\n")}
 
 const console = {

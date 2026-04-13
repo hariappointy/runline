@@ -146,6 +146,24 @@ describe("ExecutionEngine", () => {
     assert.deepEqual(result.result, { sum: 10 });
   });
 
+  it("help() returns all plugins and actions", async () => {
+    const engine = createEngine();
+    const result = await engine.execute("return help()");
+    assert.equal(result.error, undefined);
+    const data = result.result as Record<string, unknown[]>;
+    assert.ok(data.math);
+    assert.equal(data.math.length, 4);
+  });
+
+  it("plugin.help() returns actions for that plugin", async () => {
+    const engine = createEngine();
+    const result = await engine.execute("return math.help()");
+    assert.equal(result.error, undefined);
+    const actions = result.result as Array<{ action: string }>;
+    assert.equal(actions.length, 4);
+    assert.ok(actions.some((a) => a.action === "add"));
+  });
+
   it("blocks fetch", async () => {
     const engine = createEngine();
     const result = await engine.execute(
