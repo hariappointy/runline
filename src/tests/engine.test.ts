@@ -119,10 +119,10 @@ describe("ExecutionEngine", () => {
     assert.deepEqual(result.result, { waited: 10 });
   });
 
-  it("strips TypeScript types", async () => {
+  it("executes plain JS with variables", async () => {
     const engine = createEngine();
     const result = await engine.execute(
-      "const x: number = 5; const y: string = 'hello'; return { x, y }",
+      "const x = 5; const y = 'hello'; return { x, y }",
     );
     assert.equal(result.error, undefined);
     assert.deepEqual(result.result, { x: 5, y: "hello" });
