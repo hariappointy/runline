@@ -23,7 +23,7 @@ async function apiRequest(
   const token = `${header}.${payload}.${sigStr}`;
 
   const base = url.replace(/\/$/, "");
-  const fullUrl = new URL(`${base}/ghost/api/admin${endpoint}`);
+  const fullUrl = new URL(`${base}/ghost/api/v2/admin${endpoint}`);
   if (qs) {
     for (const [k, v] of Object.entries(qs)) {
       if (v !== undefined && v !== null) fullUrl.searchParams.set(k, String(v));
