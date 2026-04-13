@@ -23,7 +23,9 @@ export async function loadPluginFromPath(path: string): Promise<PluginDef> {
       try {
         const pkg = JSON.parse(readFileSync(pkgPath, "utf-8"));
         if (pkg.main) candidates.unshift(join(absPath, pkg.main));
-      } catch {}
+      } catch (err) {
+        console.error(`[runline] Failed to parse ${pkgPath}:`, (err as Error).message);
+      }
     }
 
     const found = candidates.find((c) => existsSync(c));
@@ -89,7 +91,9 @@ async function loadFromDirectory(dir: string): Promise<PluginDef[]> {
               console.error(`[runline] Failed to load plugin from ${join(fullPath, p)}:`, (err as Error).message);
             }
           }
-        } catch {}
+        } catch (err) {
+          console.error(`[runline] Failed to parse ${pkgJson}:`, (err as Error).message);
+        }
       }
     }
   }
@@ -114,7 +118,9 @@ export async function loadPluginsFromConfig(configDir: string): Promise<void> {
         console.error(`[runline] Failed to load plugin from ${p}:`, (err as Error).message);
       }
     }
-  } catch {}
+  } catch (err) {
+    console.error(`[runline] Failed to parse ${pluginsFile}:`, (err as Error).message);
+  }
 }
 
 export async function loadAllPlugins(): Promise<void> {
