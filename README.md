@@ -35,7 +35,7 @@ return { company: company.name, issue: issue.number };
 
 ## Plugins
 
-188 plugins, ported from n8n's node library. Each wraps a single service's REST/GraphQL API with typed actions.
+188 plugins covering popular SaaS, DevOps, and productivity APIs. Each wraps a single service's REST/GraphQL API with typed actions.
 
 All plugins install via `runline plugin install git:github.com/Michaelliv/runline#plugins/<name>`.
 

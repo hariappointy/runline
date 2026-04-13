@@ -27,7 +27,7 @@ export default function twake(rl: RunlinePluginAPI) {
           hidden_data: hiddenData,
         },
       };
-      const res = await fetch("https://plugins.twake.app/plugins/n8n/actions/message/save", {
+      const res = await fetch("https://plugins.twake.app/plugins/runline/actions/message/save", {
         method: "POST",
         headers: { Authorization: `Bearer ${ctx.connection.config.apiKey}`, "Content-Type": "application/json" },
         body: JSON.stringify(body),
