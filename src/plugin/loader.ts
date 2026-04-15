@@ -1,11 +1,13 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { homedir } from "node:os";
-import { join, resolve } from "node:path";
-import { pathToFileURL } from "node:url";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { findConfigDir } from "../config/loader.js";
 import { resolvePluginExport } from "./api.js";
 import { registry } from "./registry.js";
 import type { PluginDef } from "./types.js";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export async function loadPluginFromPath(path: string): Promise<PluginDef> {
   let absPath = resolve(path);
@@ -69,23 +71,19 @@ async function loadFromDirectory(dir: string): Promise<PluginDef[]> {
         );
       }
     } else if (stat.isDirectory()) {
-      const indexTs = join(fullPath, "index.ts");
-      const indexJs = join(fullPath, "index.js");
-      if (existsSync(indexTs)) {
+      const candidates = [
+        join(fullPath, "index.ts"),
+        join(fullPath, "index.js"),
+        join(fullPath, "src", "index.ts"),
+        join(fullPath, "src", "index.js"),
+      ];
+      const found = candidates.find((c) => existsSync(c));
+      if (found) {
         try {
-          plugins.push(await loadPluginFromPath(indexTs));
+          plugins.push(await loadPluginFromPath(found));
         } catch (err) {
           console.error(
-            `[runline] Failed to load plugin from ${indexTs}:`,
-            (err as Error).message,
-          );
-        }
-      } else if (existsSync(indexJs)) {
-        try {
-          plugins.push(await loadPluginFromPath(indexJs));
-        } catch (err) {
-          console.error(
-            `[runline] Failed to load plugin from ${indexJs}:`,
+            `[runline] Failed to load plugin from ${found}:`,
             (err as Error).message,
           );
         }
@@ -179,6 +177,11 @@ export async function discoverPlugins(
   const globalDir = join(homedir(), ".runline", "plugins");
   const globalPlugins = await loadFromDirectory(globalDir);
   for (const p of globalPlugins) addIfNew(p);
+
+  // Built-in plugins shipped with the package
+  const builtinDir = join(__dirname, "..", "plugins");
+  const builtinPlugins = await loadFromDirectory(builtinDir);
+  for (const p of builtinPlugins) addIfNew(p);
 
   return result;
 }

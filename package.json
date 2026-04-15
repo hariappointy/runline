@@ -25,7 +25,7 @@
     ]
   },
   "scripts": {
-    "build": "tsc && npm run build --workspaces --if-present",
+    "build": "tsc && tsc -p tsconfig.plugins.json --noCheck",
     "prepublishOnly": "npm run build",
     "dev": "npx tsx src/main.ts",
     "test": "npx tsx --test src/tests/**/*.test.ts",
