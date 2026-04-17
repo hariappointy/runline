@@ -1,6 +1,6 @@
 # runline
 
-The runline library and CLI. See the [monorepo README](../../README.md) for the full story, quickstart, and plugin catalog.
+The runline library and CLI. Published on npm as [`runline`](https://www.npmjs.com/package/runline). See the [monorepo README](../../README.md) for the full story, quickstart, and plugin catalog.
 
 ## What lives here
 

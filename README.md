@@ -11,15 +11,15 @@ npm install -g runline
 ## Quick Start
 
 ```bash
+npm install -g runline
 runline init
-runline plugin install git:github.com/Michaelliv/runline#plugins/brandfetch
 runline connection add bf --plugin brandfetch --set apiKey=xxx
 
 runline exec 'return await brandfetch.brand.getColors({ domain: "nike.com" })'
 # => [{ hex: "#E5E5E5", type: "accent" }, { hex: "#111111", type: "dark" }, ...]
 ```
 
-Agent code runs in a QuickJS sandbox. Each installed plugin is a top-level global — no bracket notation, just dot-chain into resource and action. Plugins execute outside the sandbox with full network access; the agent can only reach APIs through the actions you've installed.
+All 188 plugins ship bundled inside `runline` — no per-plugin install step. Just add a connection for the one you want to use. Agent code runs in a QuickJS sandbox: each plugin is a top-level global, dot-chain into resource and action. Plugin actions execute outside the sandbox with full network access; the agent can only reach APIs through the actions you've configured.
 
 ```js
 // agent writes this
@@ -41,8 +41,8 @@ Set the env var shown in the Auth column, add a connection, and go:
 
 ```bash
 export GITHUB_TOKEN=ghp_xxx
-runline connection add gh --plugin github
-runline exec 'return await github.repo.list({ owner: "torvalds" })'
+runline connection add gh --plugin github --set token=$GITHUB_TOKEN
+runline exec 'return await github.user.listRepos({ username: "torvalds" })'
 ```
 
 <!-- BEGIN PLUGIN TABLE -->
@@ -424,6 +424,23 @@ bun --filter runline dev -- exec 'return 1 + 2'
 bun --filter runline test
 bun run check
 ```
+
+## Pi integration
+
+The [`pi-runline`](packages/pi-runline) package is a [pi](https://github.com/mariozechner/pi) extension that plugs runline into coding agents as two native tools:
+
+- **`list_runline_actions`** — enumerate the action catalog (optionally filtered to one plugin).
+- **`execute_runline`** — run JavaScript in the runline sandbox.
+
+It ships with `/runline-plugins`, a fuzzy multi-select picker for choosing which of the 188 plugins the agent should see, plus a guided credential prompt for the ones you enable.
+
+```bash
+pi install pi-runline
+# then in any pi session inside a project with .runline/
+/runline-plugins
+```
+
+See [`packages/pi-runline/README.md`](packages/pi-runline/README.md) for details.
 
 ## How It Relates to dripline
 
