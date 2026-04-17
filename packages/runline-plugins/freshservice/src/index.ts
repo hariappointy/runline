@@ -21,20 +21,37 @@ async function apiRequest(
       "Content-Type": "application/json",
     },
   };
-  if (body && Object.keys(body).length > 0 && method !== "GET" && method !== "DELETE") {
+  if (
+    body &&
+    Object.keys(body).length > 0 &&
+    method !== "GET" &&
+    method !== "DELETE"
+  ) {
     opts.body = JSON.stringify(body);
   }
   const res = await fetch(url.toString(), opts);
-  if (!res.ok) throw new Error(`Freshservice API error ${res.status}: ${await res.text()}`);
+  if (!res.ok)
+    throw new Error(
+      `Freshservice API error ${res.status}: ${await res.text()}`,
+    );
   if (res.status === 204) return { success: true };
   return res.json();
 }
 
 function getConn(ctx: { connection: { config: Record<string, unknown> } }) {
-  return { domain: ctx.connection.config.domain as string, apiKey: ctx.connection.config.apiKey as string };
+  return {
+    domain: ctx.connection.config.domain as string,
+    apiKey: ctx.connection.config.apiKey as string,
+  };
 }
 
-function req(ctx: { connection: { config: Record<string, unknown> } }, method: string, endpoint: string, body?: Record<string, unknown>, qs?: Record<string, unknown>) {
+function req(
+  ctx: { connection: { config: Record<string, unknown> } },
+  method: string,
+  endpoint: string,
+  body?: Record<string, unknown>,
+  qs?: Record<string, unknown>,
+) {
   const { domain, apiKey } = getConn(ctx);
   return apiRequest(domain, apiKey, method, endpoint, body, qs);
 }
@@ -52,13 +69,23 @@ function registerCrud(
   resource: string,
   apiPath: string,
   singularKey: string,
-  opts?: { extraCreateFields?: Record<string, { type: string; required: boolean; description: string }>; noDelete?: boolean },
+  opts?: {
+    extraCreateFields?: Record<
+      string,
+      { type: string; required: boolean; description: string }
+    >;
+    noDelete?: boolean;
+  },
 ) {
   rl.registerAction(`${resource}.create`, {
     description: `Create a ${resource}`,
     inputSchema: {
       ...(opts?.extraCreateFields ?? {}),
-      properties: { type: "object", required: true, description: `${resource} properties as key-value pairs` },
+      properties: {
+        type: "object",
+        required: true,
+        description: `${resource} properties as key-value pairs`,
+      },
     },
     async execute(input, ctx) {
       const { properties, ...rest } = input as Record<string, unknown>;
@@ -69,9 +96,13 @@ function registerCrud(
 
   rl.registerAction(`${resource}.get`, {
     description: `Get a ${resource} by ID`,
-    inputSchema: { id: { type: "number", required: true, description: `${resource} ID` } },
+    inputSchema: {
+      id: { type: "number", required: true, description: `${resource} ID` },
+    },
     async execute(input, ctx) {
-      return unwrap(await req(ctx, "GET", `${apiPath}/${(input as { id: number }).id}`));
+      return unwrap(
+        await req(ctx, "GET", `${apiPath}/${(input as { id: number }).id}`),
+      );
     },
   });
 
@@ -94,10 +125,17 @@ function registerCrud(
     description: `Update a ${resource}`,
     inputSchema: {
       id: { type: "number", required: true, description: `${resource} ID` },
-      properties: { type: "object", required: true, description: "Fields to update" },
+      properties: {
+        type: "object",
+        required: true,
+        description: "Fields to update",
+      },
     },
     async execute(input, ctx) {
-      const { id, properties } = input as { id: number; properties: Record<string, unknown> };
+      const { id, properties } = input as {
+        id: number;
+        properties: Record<string, unknown>;
+      };
       return unwrap(await req(ctx, "PUT", `${apiPath}/${id}`, properties));
     },
   });
@@ -105,7 +143,9 @@ function registerCrud(
   if (!opts?.noDelete) {
     rl.registerAction(`${resource}.delete`, {
       description: `Delete a ${resource}`,
-      inputSchema: { id: { type: "number", required: true, description: `${resource} ID` } },
+      inputSchema: {
+        id: { type: "number", required: true, description: `${resource} ID` },
+      },
       async execute(input, ctx) {
         await req(ctx, "DELETE", `${apiPath}/${(input as { id: number }).id}`);
         return { success: true };
@@ -119,8 +159,18 @@ export default function freshservice(rl: RunlinePluginAPI) {
   rl.setVersion("0.1.0");
 
   rl.setConnectionSchema({
-    domain: { type: "string", required: true, description: "Freshservice subdomain (e.g. 'mycompany')", env: "FRESHSERVICE_DOMAIN" },
-    apiKey: { type: "string", required: true, description: "Freshservice API key", env: "FRESHSERVICE_API_KEY" },
+    domain: {
+      type: "string",
+      required: true,
+      description: "Freshservice subdomain (e.g. 'mycompany')",
+      env: "FRESHSERVICE_DOMAIN",
+    },
+    apiKey: {
+      type: "string",
+      required: true,
+      description: "Freshservice API key",
+      env: "FRESHSERVICE_API_KEY",
+    },
   });
 
   // 16 resources, all CRUD
@@ -143,9 +193,13 @@ export default function freshservice(rl: RunlinePluginAPI) {
   // agentRole is read-only (get + list only)
   rl.registerAction("agentRole.get", {
     description: "Get an agent role by ID",
-    inputSchema: { id: { type: "number", required: true, description: "Role ID" } },
+    inputSchema: {
+      id: { type: "number", required: true, description: "Role ID" },
+    },
     async execute(input, ctx) {
-      return unwrap(await req(ctx, "GET", `/roles/${(input as { id: number }).id}`));
+      return unwrap(
+        await req(ctx, "GET", `/roles/${(input as { id: number }).id}`),
+      );
     },
   });
 

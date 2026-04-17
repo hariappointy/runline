@@ -3,21 +3,44 @@ import type { RunlinePluginAPI } from "runline";
 const BASE_URL = "https://api.infusionsoft.com/crm/rest/v1";
 
 async function apiRequest(
-  token: string, method: string, endpoint: string,
-  body?: Record<string, unknown>, qs?: Record<string, unknown>,
+  token: string,
+  method: string,
+  endpoint: string,
+  body?: Record<string, unknown>,
+  qs?: Record<string, unknown>,
 ): Promise<unknown> {
   const url = new URL(`${BASE_URL}${endpoint}`);
-  if (qs) { for (const [k, v] of Object.entries(qs)) { if (v !== undefined && v !== null) url.searchParams.set(k, String(v)); } }
-  const opts: RequestInit = { method, headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" } };
-  if (body && Object.keys(body).length > 0 && method !== "GET" && method !== "DELETE") opts.body = JSON.stringify(body);
+  if (qs) {
+    for (const [k, v] of Object.entries(qs)) {
+      if (v !== undefined && v !== null) url.searchParams.set(k, String(v));
+    }
+  }
+  const opts: RequestInit = {
+    method,
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+  };
+  if (
+    body &&
+    Object.keys(body).length > 0 &&
+    method !== "GET" &&
+    method !== "DELETE"
+  )
+    opts.body = JSON.stringify(body);
   const res = await fetch(url.toString(), opts);
-  if (!res.ok) throw new Error(`Keap API error ${res.status}: ${await res.text()}`);
+  if (!res.ok)
+    throw new Error(`Keap API error ${res.status}: ${await res.text()}`);
   if (res.status === 204) return { success: true };
   return res.json();
 }
 
 async function apiRequestAllItems(
-  token: string, propertyName: string, method: string, endpoint: string,
+  token: string,
+  propertyName: string,
+  method: string,
+  endpoint: string,
   qs: Record<string, unknown> = {},
 ): Promise<unknown[]> {
   const all: unknown[] = [];
@@ -25,13 +48,15 @@ async function apiRequestAllItems(
   qs.limit = 50;
   let data: Record<string, unknown>;
   do {
-    data = (uri
-      ? await apiRequest(token, method, "", undefined, { ...qs })
-      : await apiRequest(token, method, endpoint, undefined, qs)) as Record<string, unknown>;
+    data = (
+      uri
+        ? await apiRequest(token, method, "", undefined, { ...qs })
+        : await apiRequest(token, method, endpoint, undefined, qs)
+    ) as Record<string, unknown>;
     const items = data[propertyName];
     if (Array.isArray(items)) all.push(...items);
     uri = data.next as string | undefined;
-  } while (all.length < (data.count as number ?? all.length + 1) && uri);
+  } while (all.length < ((data.count as number) ?? all.length + 1) && uri);
   return all;
 }
 
@@ -40,23 +65,52 @@ export default function keap(rl: RunlinePluginAPI) {
   rl.setVersion("0.1.0");
 
   rl.setConnectionSchema({
-    accessToken: { type: "string", required: true, description: "Keap OAuth2 access token", env: "KEAP_ACCESS_TOKEN" },
+    accessToken: {
+      type: "string",
+      required: true,
+      description: "Keap OAuth2 access token",
+      env: "KEAP_ACCESS_TOKEN",
+    },
   });
 
-  const tok = (ctx: { connection: { config: Record<string, unknown> } }) => ctx.connection.config.accessToken as string;
+  const tok = (ctx: { connection: { config: Record<string, unknown> } }) =>
+    ctx.connection.config.accessToken as string;
 
   // ── Company ─────────────────────────────────────────
   rl.registerAction("company.create", {
     description: "Create a company",
     inputSchema: {
-      companyName: { type: "string", required: true, description: "Company name" },
-      address: { type: "object", required: false, description: "Address object (line1, line2, locality, region, zip_code, country_code)" },
-      phone: { type: "object", required: false, description: "Phone object (number, field, type)" },
-      fax: { type: "object", required: false, description: "Fax object (number, type)" },
-      additionalFields: { type: "object", required: false, description: "Additional company fields (email_address, website, notes, etc.)" },
+      companyName: {
+        type: "string",
+        required: true,
+        description: "Company name",
+      },
+      address: {
+        type: "object",
+        required: false,
+        description:
+          "Address object (line1, line2, locality, region, zip_code, country_code)",
+      },
+      phone: {
+        type: "object",
+        required: false,
+        description: "Phone object (number, field, type)",
+      },
+      fax: {
+        type: "object",
+        required: false,
+        description: "Fax object (number, type)",
+      },
+      additionalFields: {
+        type: "object",
+        required: false,
+        description:
+          "Additional company fields (email_address, website, notes, etc.)",
+      },
     },
     async execute(input, ctx) {
-      const { companyName, address, phone, fax, additionalFields } = input as Record<string, unknown>;
+      const { companyName, address, phone, fax, additionalFields } =
+        input as Record<string, unknown>;
       const body: Record<string, unknown> = { company_name: companyName };
       if (additionalFields) Object.assign(body, additionalFields);
       if (address) body.address = address;
@@ -69,38 +123,100 @@ export default function keap(rl: RunlinePluginAPI) {
   rl.registerAction("company.list", {
     description: "List companies",
     inputSchema: {
-      limit: { type: "number", required: false, description: "Max results (default 50)" },
+      limit: {
+        type: "number",
+        required: false,
+        description: "Max results (default 50)",
+      },
       offset: { type: "number", required: false },
-      optionalProperties: { type: "string", required: false, description: "Comma-separated optional fields to include" },
+      optionalProperties: {
+        type: "string",
+        required: false,
+        description: "Comma-separated optional fields to include",
+      },
     },
     async execute(input, ctx) {
-      const { limit, offset, optionalProperties } = (input ?? {}) as Record<string, unknown>;
+      const { limit, offset, optionalProperties } = (input ?? {}) as Record<
+        string,
+        unknown
+      >;
       const qs: Record<string, unknown> = {};
       if (limit) qs.limit = limit;
       if (offset) qs.offset = offset;
       if (optionalProperties) qs.optional_properties = optionalProperties;
-      const data = await apiRequest(tok(ctx), "GET", "/companies", undefined, qs) as Record<string, unknown>;
+      const data = (await apiRequest(
+        tok(ctx),
+        "GET",
+        "/companies",
+        undefined,
+        qs,
+      )) as Record<string, unknown>;
       return data.companies;
     },
   });
 
   // ── Contact ─────────────────────────────────────────
   rl.registerAction("contact.upsert", {
-    description: "Create or update a contact (PUT). Duplicate matching is controlled by duplicate_option.",
+    description:
+      "Create or update a contact (PUT). Duplicate matching is controlled by duplicate_option.",
     inputSchema: {
-      duplicateOption: { type: "string", required: true, description: "How to handle duplicates: 'Email', 'EmailAndName', 'EmailAndNameAndCompany'" },
-      emailAddresses: { type: "array", required: false, description: "Array of {email, field} objects (field: EMAIL1, EMAIL2, EMAIL3)" },
+      duplicateOption: {
+        type: "string",
+        required: true,
+        description:
+          "How to handle duplicates: 'Email', 'EmailAndName', 'EmailAndNameAndCompany'",
+      },
+      emailAddresses: {
+        type: "array",
+        required: false,
+        description:
+          "Array of {email, field} objects (field: EMAIL1, EMAIL2, EMAIL3)",
+      },
       givenName: { type: "string", required: false },
       familyName: { type: "string", required: false },
-      phoneNumbers: { type: "array", required: false, description: "Array of {number, field, type} objects" },
-      addresses: { type: "array", required: false, description: "Array of address objects (line1, line2, locality, region, zip_code, country_code, field)" },
-      faxNumbers: { type: "array", required: false, description: "Array of {number, type} objects" },
-      socialAccounts: { type: "array", required: false, description: "Array of {name, type} objects" },
-      additionalFields: { type: "object", required: false, description: "Additional fields: contact_type, job_title, lead_source_id, middle_name, opt_in_reason, owner_id, preferred_locale, preferred_name, source_type, spouse_name, time_zone, website, anniversary, company (as {id: number}), origin (as {ip_address: string})" },
+      phoneNumbers: {
+        type: "array",
+        required: false,
+        description: "Array of {number, field, type} objects",
+      },
+      addresses: {
+        type: "array",
+        required: false,
+        description:
+          "Array of address objects (line1, line2, locality, region, zip_code, country_code, field)",
+      },
+      faxNumbers: {
+        type: "array",
+        required: false,
+        description: "Array of {number, type} objects",
+      },
+      socialAccounts: {
+        type: "array",
+        required: false,
+        description: "Array of {name, type} objects",
+      },
+      additionalFields: {
+        type: "object",
+        required: false,
+        description:
+          "Additional fields: contact_type, job_title, lead_source_id, middle_name, opt_in_reason, owner_id, preferred_locale, preferred_name, source_type, spouse_name, time_zone, website, anniversary, company (as {id: number}), origin (as {ip_address: string})",
+      },
     },
     async execute(input, ctx) {
-      const { duplicateOption, emailAddresses, givenName, familyName, phoneNumbers, addresses, faxNumbers, socialAccounts, additionalFields } = input as Record<string, unknown>;
-      const body: Record<string, unknown> = { duplicate_option: duplicateOption };
+      const {
+        duplicateOption,
+        emailAddresses,
+        givenName,
+        familyName,
+        phoneNumbers,
+        addresses,
+        faxNumbers,
+        socialAccounts,
+        additionalFields,
+      } = input as Record<string, unknown>;
+      const body: Record<string, unknown> = {
+        duplicate_option: duplicateOption,
+      };
       if (givenName) body.given_name = givenName;
       if (familyName) body.family_name = familyName;
       if (emailAddresses) body.email_addresses = emailAddresses;
@@ -117,13 +233,26 @@ export default function keap(rl: RunlinePluginAPI) {
     description: "Get a contact by ID",
     inputSchema: {
       contactId: { type: "number", required: true },
-      optionalProperties: { type: "string", required: false, description: "Comma-separated optional fields" },
+      optionalProperties: {
+        type: "string",
+        required: false,
+        description: "Comma-separated optional fields",
+      },
     },
     async execute(input, ctx) {
-      const { contactId, optionalProperties } = input as Record<string, unknown>;
+      const { contactId, optionalProperties } = input as Record<
+        string,
+        unknown
+      >;
       const qs: Record<string, unknown> = {};
       if (optionalProperties) qs.optional_properties = optionalProperties;
-      return apiRequest(tok(ctx), "GET", `/contacts/${contactId}`, undefined, qs);
+      return apiRequest(
+        tok(ctx),
+        "GET",
+        `/contacts/${contactId}`,
+        undefined,
+        qs,
+      );
     },
   });
 
@@ -135,7 +264,11 @@ export default function keap(rl: RunlinePluginAPI) {
       givenName: { type: "string", required: false },
       familyName: { type: "string", required: false },
       order: { type: "string", required: false },
-      orderDirection: { type: "string", required: false, description: "ASCENDING or DESCENDING" },
+      orderDirection: {
+        type: "string",
+        required: false,
+        description: "ASCENDING or DESCENDING",
+      },
       since: { type: "string", required: false, description: "ISO date" },
       until: { type: "string", required: false, description: "ISO date" },
     },
@@ -150,7 +283,13 @@ export default function keap(rl: RunlinePluginAPI) {
       if (p.orderDirection) qs.order_direction = p.orderDirection;
       if (p.since) qs.since = p.since;
       if (p.until) qs.until = p.until;
-      const data = await apiRequest(tok(ctx), "GET", "/contacts", undefined, qs) as Record<string, unknown>;
+      const data = (await apiRequest(
+        tok(ctx),
+        "GET",
+        "/contacts",
+        undefined,
+        qs,
+      )) as Record<string, unknown>;
       return data.contacts;
     },
   });
@@ -159,7 +298,11 @@ export default function keap(rl: RunlinePluginAPI) {
     description: "Delete a contact",
     inputSchema: { contactId: { type: "number", required: true } },
     async execute(input, ctx) {
-      await apiRequest(tok(ctx), "DELETE", `/contacts/${(input as { contactId: number }).contactId}`);
+      await apiRequest(
+        tok(ctx),
+        "DELETE",
+        `/contacts/${(input as { contactId: number }).contactId}`,
+      );
       return { success: true };
     },
   });
@@ -168,15 +311,32 @@ export default function keap(rl: RunlinePluginAPI) {
   rl.registerAction("contactNote.create", {
     description: "Create a note on a contact",
     inputSchema: {
-      userId: { type: "number", required: true, description: "Keap user ID who is creating the note" },
+      userId: {
+        type: "number",
+        required: true,
+        description: "Keap user ID who is creating the note",
+      },
       contactId: { type: "number", required: true },
       body: { type: "string", required: false, description: "Note body text" },
       title: { type: "string", required: false },
-      type: { type: "string", required: false, description: "Appointment, Call, Email, Fax, Letter, Other" },
+      type: {
+        type: "string",
+        required: false,
+        description: "Appointment, Call, Email, Fax, Letter, Other",
+      },
     },
     async execute(input, ctx) {
-      const { userId, contactId, body: noteBody, title, type } = input as Record<string, unknown>;
-      const b: Record<string, unknown> = { user_id: userId, contact_id: contactId };
+      const {
+        userId,
+        contactId,
+        body: noteBody,
+        title,
+        type,
+      } = input as Record<string, unknown>;
+      const b: Record<string, unknown> = {
+        user_id: userId,
+        contact_id: contactId,
+      };
       if (noteBody) b.body = noteBody;
       if (title) b.title = title;
       if (type) b.type = type;
@@ -187,15 +347,29 @@ export default function keap(rl: RunlinePluginAPI) {
   rl.registerAction("contactNote.get", {
     description: "Get a note",
     inputSchema: { noteId: { type: "number", required: true } },
-    async execute(input, ctx) { return apiRequest(tok(ctx), "GET", `/notes/${(input as { noteId: number }).noteId}`); },
+    async execute(input, ctx) {
+      return apiRequest(
+        tok(ctx),
+        "GET",
+        `/notes/${(input as { noteId: number }).noteId}`,
+      );
+    },
   });
 
   rl.registerAction("contactNote.list", {
     description: "List notes (optionally filtered by contact_id, user_id)",
     inputSchema: {
       limit: { type: "number", required: false },
-      contactId: { type: "number", required: false, description: "Filter by contact" },
-      userId: { type: "number", required: false, description: "Filter by user" },
+      contactId: {
+        type: "number",
+        required: false,
+        description: "Filter by contact",
+      },
+      userId: {
+        type: "number",
+        required: false,
+        description: "Filter by user",
+      },
     },
     async execute(input, ctx) {
       const p = (input ?? {}) as Record<string, unknown>;
@@ -203,7 +377,13 @@ export default function keap(rl: RunlinePluginAPI) {
       if (p.limit) qs.limit = p.limit;
       if (p.contactId) qs.contact_id = p.contactId;
       if (p.userId) qs.user_id = p.userId;
-      const data = await apiRequest(tok(ctx), "GET", "/notes", undefined, qs) as Record<string, unknown>;
+      const data = (await apiRequest(
+        tok(ctx),
+        "GET",
+        "/notes",
+        undefined,
+        qs,
+      )) as Record<string, unknown>;
       return data.notes;
     },
   });
@@ -230,7 +410,11 @@ export default function keap(rl: RunlinePluginAPI) {
     description: "Delete a note",
     inputSchema: { noteId: { type: "number", required: true } },
     async execute(input, ctx) {
-      await apiRequest(tok(ctx), "DELETE", `/notes/${(input as { noteId: number }).noteId}`);
+      await apiRequest(
+        tok(ctx),
+        "DELETE",
+        `/notes/${(input as { noteId: number }).noteId}`,
+      );
       return { success: true };
     },
   });
@@ -240,11 +424,17 @@ export default function keap(rl: RunlinePluginAPI) {
     description: "Apply tags to a contact",
     inputSchema: {
       contactId: { type: "number", required: true },
-      tagIds: { type: "array", required: true, description: "Array of tag IDs to apply" },
+      tagIds: {
+        type: "array",
+        required: true,
+        description: "Array of tag IDs to apply",
+      },
     },
     async execute(input, ctx) {
       const { contactId, tagIds } = input as Record<string, unknown>;
-      return apiRequest(tok(ctx), "POST", `/contacts/${contactId}/tags`, { tagIds });
+      return apiRequest(tok(ctx), "POST", `/contacts/${contactId}/tags`, {
+        tagIds,
+      });
     },
   });
 
@@ -252,11 +442,21 @@ export default function keap(rl: RunlinePluginAPI) {
     description: "Remove tags from a contact",
     inputSchema: {
       contactId: { type: "number", required: true },
-      tagIds: { type: "string", required: true, description: "Comma-separated tag IDs to remove" },
+      tagIds: {
+        type: "string",
+        required: true,
+        description: "Comma-separated tag IDs to remove",
+      },
     },
     async execute(input, ctx) {
       const { contactId, tagIds } = input as Record<string, unknown>;
-      await apiRequest(tok(ctx), "DELETE", `/contacts/${contactId}/tags`, undefined, { ids: tagIds as string });
+      await apiRequest(
+        tok(ctx),
+        "DELETE",
+        `/contacts/${contactId}/tags`,
+        undefined,
+        { ids: tagIds as string },
+      );
       return { success: true };
     },
   });
@@ -271,7 +471,13 @@ export default function keap(rl: RunlinePluginAPI) {
       const { contactId, limit } = input as Record<string, unknown>;
       const qs: Record<string, unknown> = {};
       if (limit) qs.limit = limit;
-      const data = await apiRequest(tok(ctx), "GET", `/contacts/${contactId}/tags`, undefined, qs) as Record<string, unknown>;
+      const data = (await apiRequest(
+        tok(ctx),
+        "GET",
+        `/contacts/${contactId}/tags`,
+        undefined,
+        qs,
+      )) as Record<string, unknown>;
       return data.tags;
     },
   });
@@ -283,13 +489,35 @@ export default function keap(rl: RunlinePluginAPI) {
       contactId: { type: "number", required: true },
       orderDate: { type: "string", required: true, description: "ISO date" },
       orderTitle: { type: "string", required: true },
-      orderType: { type: "string", required: true, description: "Online, Offline, etc." },
-      orderItems: { type: "array", required: true, description: "Array of order item objects (product_id, quantity, price, etc.)" },
+      orderType: {
+        type: "string",
+        required: true,
+        description: "Online, Offline, etc.",
+      },
+      orderItems: {
+        type: "array",
+        required: true,
+        description:
+          "Array of order item objects (product_id, quantity, price, etc.)",
+      },
       shippingAddress: { type: "object", required: false },
-      additionalFields: { type: "object", required: false, description: "promo_codes (array), lead_affiliate_id, sale_affiliate_id, etc." },
+      additionalFields: {
+        type: "object",
+        required: false,
+        description:
+          "promo_codes (array), lead_affiliate_id, sale_affiliate_id, etc.",
+      },
     },
     async execute(input, ctx) {
-      const { contactId, orderDate, orderTitle, orderType, orderItems, shippingAddress, additionalFields } = input as Record<string, unknown>;
+      const {
+        contactId,
+        orderDate,
+        orderTitle,
+        orderType,
+        orderItems,
+        shippingAddress,
+        additionalFields,
+      } = input as Record<string, unknown>;
       const body: Record<string, unknown> = {
         contact_id: contactId,
         order_date: orderDate,
@@ -306,7 +534,13 @@ export default function keap(rl: RunlinePluginAPI) {
   rl.registerAction("order.get", {
     description: "Get an order",
     inputSchema: { orderId: { type: "number", required: true } },
-    async execute(input, ctx) { return apiRequest(tok(ctx), "GET", `/orders/${(input as { orderId: number }).orderId}`); },
+    async execute(input, ctx) {
+      return apiRequest(
+        tok(ctx),
+        "GET",
+        `/orders/${(input as { orderId: number }).orderId}`,
+      );
+    },
   });
 
   rl.registerAction("order.list", {
@@ -324,7 +558,13 @@ export default function keap(rl: RunlinePluginAPI) {
       if (p.contactId) qs.contact_id = p.contactId;
       if (p.since) qs.since = p.since;
       if (p.until) qs.until = p.until;
-      const data = await apiRequest(tok(ctx), "GET", "/orders", undefined, qs) as Record<string, unknown>;
+      const data = (await apiRequest(
+        tok(ctx),
+        "GET",
+        "/orders",
+        undefined,
+        qs,
+      )) as Record<string, unknown>;
       return data.orders;
     },
   });
@@ -333,7 +573,11 @@ export default function keap(rl: RunlinePluginAPI) {
     description: "Delete an order",
     inputSchema: { orderId: { type: "number", required: true } },
     async execute(input, ctx) {
-      await apiRequest(tok(ctx), "DELETE", `/orders/${(input as { orderId: number }).orderId}`);
+      await apiRequest(
+        tok(ctx),
+        "DELETE",
+        `/orders/${(input as { orderId: number }).orderId}`,
+      );
       return { success: true };
     },
   });
@@ -343,10 +587,17 @@ export default function keap(rl: RunlinePluginAPI) {
     description: "Create a product",
     inputSchema: {
       productName: { type: "string", required: true },
-      additionalFields: { type: "object", required: false, description: "product_price, product_desc, sku, etc." },
+      additionalFields: {
+        type: "object",
+        required: false,
+        description: "product_price, product_desc, sku, etc.",
+      },
     },
     async execute(input, ctx) {
-      const { productName, additionalFields } = input as Record<string, unknown>;
+      const { productName, additionalFields } = input as Record<
+        string,
+        unknown
+      >;
       const body: Record<string, unknown> = { product_name: productName };
       if (additionalFields) Object.assign(body, additionalFields);
       return apiRequest(tok(ctx), "POST", "/products", body);
@@ -356,7 +607,13 @@ export default function keap(rl: RunlinePluginAPI) {
   rl.registerAction("product.get", {
     description: "Get a product",
     inputSchema: { productId: { type: "number", required: true } },
-    async execute(input, ctx) { return apiRequest(tok(ctx), "GET", `/products/${(input as { productId: number }).productId}`); },
+    async execute(input, ctx) {
+      return apiRequest(
+        tok(ctx),
+        "GET",
+        `/products/${(input as { productId: number }).productId}`,
+      );
+    },
   });
 
   rl.registerAction("product.list", {
@@ -364,8 +621,15 @@ export default function keap(rl: RunlinePluginAPI) {
     inputSchema: { limit: { type: "number", required: false } },
     async execute(input, ctx) {
       const qs: Record<string, unknown> = {};
-      if ((input as Record<string, unknown>)?.limit) qs.limit = (input as Record<string, unknown>).limit;
-      const data = await apiRequest(tok(ctx), "GET", "/products", undefined, qs) as Record<string, unknown>;
+      if ((input as Record<string, unknown>)?.limit)
+        qs.limit = (input as Record<string, unknown>).limit;
+      const data = (await apiRequest(
+        tok(ctx),
+        "GET",
+        "/products",
+        undefined,
+        qs,
+      )) as Record<string, unknown>;
       return data.products;
     },
   });
@@ -374,7 +638,11 @@ export default function keap(rl: RunlinePluginAPI) {
     description: "Delete a product",
     inputSchema: { productId: { type: "number", required: true } },
     async execute(input, ctx) {
-      await apiRequest(tok(ctx), "DELETE", `/products/${(input as { productId: number }).productId}`);
+      await apiRequest(
+        tok(ctx),
+        "DELETE",
+        `/products/${(input as { productId: number }).productId}`,
+      );
       return { success: true };
     },
   });
@@ -385,11 +653,20 @@ export default function keap(rl: RunlinePluginAPI) {
     inputSchema: {
       sentFromAddress: { type: "string", required: true },
       sentToAddress: { type: "string", required: true },
-      additionalFields: { type: "object", required: false, description: "subject, sent_date, received_date, headers, html_content, plain_content, etc." },
+      additionalFields: {
+        type: "object",
+        required: false,
+        description:
+          "subject, sent_date, received_date, headers, html_content, plain_content, etc.",
+      },
     },
     async execute(input, ctx) {
-      const { sentFromAddress, sentToAddress, additionalFields } = input as Record<string, unknown>;
-      const body: Record<string, unknown> = { sent_to_address: sentToAddress, sent_from_address: sentFromAddress };
+      const { sentFromAddress, sentToAddress, additionalFields } =
+        input as Record<string, unknown>;
+      const body: Record<string, unknown> = {
+        sent_to_address: sentToAddress,
+        sent_from_address: sentFromAddress,
+      };
       if (additionalFields) Object.assign(body, additionalFields);
       return apiRequest(tok(ctx), "POST", "/emails", body);
     },
@@ -399,7 +676,11 @@ export default function keap(rl: RunlinePluginAPI) {
     description: "Delete an email record",
     inputSchema: { emailRecordId: { type: "number", required: true } },
     async execute(input, ctx) {
-      await apiRequest(tok(ctx), "DELETE", `/emails/${(input as { emailRecordId: number }).emailRecordId}`);
+      await apiRequest(
+        tok(ctx),
+        "DELETE",
+        `/emails/${(input as { emailRecordId: number }).emailRecordId}`,
+      );
       return { success: true };
     },
   });
@@ -419,7 +700,13 @@ export default function keap(rl: RunlinePluginAPI) {
       if (p.contactId) qs.contact_id = p.contactId;
       if (p.email) qs.email = p.email;
       if (p.sinceDate) qs.since_sent_date = p.sinceDate;
-      const data = await apiRequest(tok(ctx), "GET", "/emails", undefined, qs) as Record<string, unknown>;
+      const data = (await apiRequest(
+        tok(ctx),
+        "GET",
+        "/emails",
+        undefined,
+        qs,
+      )) as Record<string, unknown>;
       return data.emails;
     },
   });
@@ -427,16 +714,39 @@ export default function keap(rl: RunlinePluginAPI) {
   rl.registerAction("email.send", {
     description: "Queue an email to be sent",
     inputSchema: {
-      userId: { type: "number", required: true, description: "Keap user ID sending the email" },
-      contactIds: { type: "array", required: true, description: "Array of contact IDs to send to" },
+      userId: {
+        type: "number",
+        required: true,
+        description: "Keap user ID sending the email",
+      },
+      contactIds: {
+        type: "array",
+        required: true,
+        description: "Array of contact IDs to send to",
+      },
       subject: { type: "string", required: true },
       htmlContent: { type: "string", required: false },
       plainContent: { type: "string", required: false },
-      attachments: { type: "array", required: false, description: "Array of {file_data, file_name} objects" },
+      attachments: {
+        type: "array",
+        required: false,
+        description: "Array of {file_data, file_name} objects",
+      },
     },
     async execute(input, ctx) {
-      const { userId, contactIds, subject, htmlContent, plainContent, attachments } = input as Record<string, unknown>;
-      const body: Record<string, unknown> = { user_id: userId, contacts: contactIds, subject };
+      const {
+        userId,
+        contactIds,
+        subject,
+        htmlContent,
+        plainContent,
+        attachments,
+      } = input as Record<string, unknown>;
+      const body: Record<string, unknown> = {
+        user_id: userId,
+        contacts: contactIds,
+        subject,
+      };
       if (htmlContent) body.html_content = htmlContent;
       if (plainContent) body.plain_content = plainContent;
       if (attachments) body.attachments = attachments;
@@ -450,7 +760,11 @@ export default function keap(rl: RunlinePluginAPI) {
     description: "Delete a file",
     inputSchema: { fileId: { type: "number", required: true } },
     async execute(input, ctx) {
-      await apiRequest(tok(ctx), "DELETE", `/files/${(input as { fileId: number }).fileId}`);
+      await apiRequest(
+        tok(ctx),
+        "DELETE",
+        `/files/${(input as { fileId: number }).fileId}`,
+      );
       return { success: true };
     },
   });
@@ -459,9 +773,22 @@ export default function keap(rl: RunlinePluginAPI) {
     description: "List files",
     inputSchema: {
       limit: { type: "number", required: false },
-      permission: { type: "string", required: false, description: "USER, COMPANY" },
-      type: { type: "string", required: false, description: "Application, Image, Fax, Attachment, Ticket, Contact, Digital Product, Import, Hidden, Webform, Styled Cart, Logo, Resampled, Template Thumbnail, Funnel" },
-      viewable: { type: "string", required: false, description: "PUBLIC, PRIVATE, BOTH" },
+      permission: {
+        type: "string",
+        required: false,
+        description: "USER, COMPANY",
+      },
+      type: {
+        type: "string",
+        required: false,
+        description:
+          "Application, Image, Fax, Attachment, Ticket, Contact, Digital Product, Import, Hidden, Webform, Styled Cart, Logo, Resampled, Template Thumbnail, Funnel",
+      },
+      viewable: {
+        type: "string",
+        required: false,
+        description: "PUBLIC, PRIVATE, BOTH",
+      },
       contactId: { type: "number", required: false },
     },
     async execute(input, ctx) {
@@ -472,7 +799,13 @@ export default function keap(rl: RunlinePluginAPI) {
       if (p.type) qs.type = p.type;
       if (p.viewable) qs.viewable = (p.viewable as string).toUpperCase();
       if (p.contactId) qs.contact_id = p.contactId;
-      const data = await apiRequest(tok(ctx), "GET", "/files", undefined, qs) as Record<string, unknown>;
+      const data = (await apiRequest(
+        tok(ctx),
+        "GET",
+        "/files",
+        undefined,
+        qs,
+      )) as Record<string, unknown>;
       return data.files;
     },
   });

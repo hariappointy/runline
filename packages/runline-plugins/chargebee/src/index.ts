@@ -65,8 +65,16 @@ export default function chargebee(rl: RunlinePluginAPI) {
   rl.registerAction("customer.create", {
     description: "Create a customer",
     inputSchema: {
-      id: { type: "string", required: false, description: "Customer ID (auto-generated if omitted)" },
-      first_name: { type: "string", required: false, description: "First name" },
+      id: {
+        type: "string",
+        required: false,
+        description: "Customer ID (auto-generated if omitted)",
+      },
+      first_name: {
+        type: "string",
+        required: false,
+        description: "First name",
+      },
       last_name: { type: "string", required: false, description: "Last name" },
       email: { type: "string", required: false, description: "Email" },
       phone: { type: "string", required: false, description: "Phone" },
@@ -85,8 +93,16 @@ export default function chargebee(rl: RunlinePluginAPI) {
   rl.registerAction("invoice.list", {
     description: "List invoices",
     inputSchema: {
-      limit: { type: "number", required: false, description: "Max results (default: 10, max: 100)" },
-      sortBy: { type: "string", required: false, description: "Sort field (default: date desc)" },
+      limit: {
+        type: "number",
+        required: false,
+        description: "Max results (default: 10, max: 100)",
+      },
+      sortBy: {
+        type: "string",
+        required: false,
+        description: "Sort field (default: date desc)",
+      },
     },
     async execute(input, ctx) {
       const { accountName, apiKey } = getConn(ctx);
@@ -95,7 +111,13 @@ export default function chargebee(rl: RunlinePluginAPI) {
         limit,
         "sort_by[desc]": "date",
       };
-      const data = (await apiRequest(accountName, apiKey, "GET", "invoices", qs)) as Record<string, unknown>;
+      const data = (await apiRequest(
+        accountName,
+        apiKey,
+        "GET",
+        "invoices",
+        qs,
+      )) as Record<string, unknown>;
       const list = (data.list as Array<Record<string, unknown>>) ?? [];
       return list.map((item) => item.invoice);
     },
@@ -109,7 +131,12 @@ export default function chargebee(rl: RunlinePluginAPI) {
     async execute(input, ctx) {
       const { invoiceId } = input as { invoiceId: string };
       const { accountName, apiKey } = getConn(ctx);
-      const data = (await apiRequest(accountName, apiKey, "POST", `invoices/${invoiceId.trim()}/pdf`)) as Record<string, unknown>;
+      const data = (await apiRequest(
+        accountName,
+        apiKey,
+        "POST",
+        `invoices/${invoiceId.trim()}/pdf`,
+      )) as Record<string, unknown>;
       const download = data.download as Record<string, unknown>;
       return { pdfUrl: download?.download_url };
     },
@@ -120,27 +147,54 @@ export default function chargebee(rl: RunlinePluginAPI) {
   rl.registerAction("subscription.cancel", {
     description: "Cancel a subscription",
     inputSchema: {
-      subscriptionId: { type: "string", required: true, description: "Subscription ID" },
-      endOfTerm: { type: "boolean", required: false, description: "Schedule cancellation at end of term instead of immediate" },
+      subscriptionId: {
+        type: "string",
+        required: true,
+        description: "Subscription ID",
+      },
+      endOfTerm: {
+        type: "boolean",
+        required: false,
+        description:
+          "Schedule cancellation at end of term instead of immediate",
+      },
     },
     async execute(input, ctx) {
-      const { subscriptionId, endOfTerm } = input as { subscriptionId: string; endOfTerm?: boolean };
+      const { subscriptionId, endOfTerm } = input as {
+        subscriptionId: string;
+        endOfTerm?: boolean;
+      };
       const { accountName, apiKey } = getConn(ctx);
       const qs: Record<string, unknown> = {};
       if (endOfTerm) qs.end_of_term = "true";
-      return apiRequest(accountName, apiKey, "POST", `subscriptions/${subscriptionId.trim()}/cancel`, qs);
+      return apiRequest(
+        accountName,
+        apiKey,
+        "POST",
+        `subscriptions/${subscriptionId.trim()}/cancel`,
+        qs,
+      );
     },
   });
 
   rl.registerAction("subscription.delete", {
     description: "Delete a subscription",
     inputSchema: {
-      subscriptionId: { type: "string", required: true, description: "Subscription ID" },
+      subscriptionId: {
+        type: "string",
+        required: true,
+        description: "Subscription ID",
+      },
     },
     async execute(input, ctx) {
       const { subscriptionId } = input as { subscriptionId: string };
       const { accountName, apiKey } = getConn(ctx);
-      return apiRequest(accountName, apiKey, "POST", `subscriptions/${subscriptionId.trim()}/delete`);
+      return apiRequest(
+        accountName,
+        apiKey,
+        "POST",
+        `subscriptions/${subscriptionId.trim()}/delete`,
+      );
     },
   });
 }

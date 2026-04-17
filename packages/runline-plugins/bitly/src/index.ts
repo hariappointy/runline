@@ -15,7 +15,12 @@ async function apiRequest(
       Authorization: `Bearer ${token}`,
     },
   };
-  if (body && Object.keys(body).length > 0 && method !== "GET" && method !== "DELETE") {
+  if (
+    body &&
+    Object.keys(body).length > 0 &&
+    method !== "GET" &&
+    method !== "DELETE"
+  ) {
     opts.body = JSON.stringify(body);
   }
 
@@ -27,7 +32,9 @@ async function apiRequest(
   return res.json();
 }
 
-function getToken(ctx: { connection: { config: Record<string, unknown> } }): string {
+function getToken(ctx: {
+  connection: { config: Record<string, unknown> };
+}): string {
   return ctx.connection.config.accessToken as string;
 }
 
@@ -47,19 +54,37 @@ export default function bitly(rl: RunlinePluginAPI) {
   rl.registerAction("link.create", {
     description: "Create a shortened link (bitlink)",
     inputSchema: {
-      longUrl: { type: "string", required: true, description: "Long URL to shorten" },
-      title: { type: "string", required: false, description: "Title for the link" },
-      domain: { type: "string", required: false, description: "Custom domain (default: bit.ly)" },
+      longUrl: {
+        type: "string",
+        required: true,
+        description: "Long URL to shorten",
+      },
+      title: {
+        type: "string",
+        required: false,
+        description: "Title for the link",
+      },
+      domain: {
+        type: "string",
+        required: false,
+        description: "Custom domain (default: bit.ly)",
+      },
       group: { type: "string", required: false, description: "Group GUID" },
-      tags: { type: "array", required: false, description: "Array of tag strings" },
+      tags: {
+        type: "array",
+        required: false,
+        description: "Array of tag strings",
+      },
       deeplinks: {
         type: "array",
         required: false,
-        description: "Array of {app_uri_path, install_type, install_url, app_id}",
+        description:
+          "Array of {app_uri_path, install_type, install_url, app_id}",
       },
     },
     async execute(input, ctx) {
-      const { longUrl, title, domain, group, tags, deeplinks } = (input ?? {}) as Record<string, unknown>;
+      const { longUrl, title, domain, group, tags, deeplinks } = (input ??
+        {}) as Record<string, unknown>;
       const body: Record<string, unknown> = { long_url: longUrl };
       if (title) body.title = title;
       if (domain) body.domain = domain;
@@ -73,7 +98,11 @@ export default function bitly(rl: RunlinePluginAPI) {
   rl.registerAction("link.get", {
     description: "Get a bitlink by ID",
     inputSchema: {
-      bitlink: { type: "string", required: true, description: "Bitlink (e.g. bit.ly/22u3ypK)" },
+      bitlink: {
+        type: "string",
+        required: true,
+        description: "Bitlink (e.g. bit.ly/22u3ypK)",
+      },
     },
     async execute(input, ctx) {
       const { bitlink } = input as { bitlink: string };
@@ -84,20 +113,34 @@ export default function bitly(rl: RunlinePluginAPI) {
   rl.registerAction("link.update", {
     description: "Update a bitlink",
     inputSchema: {
-      bitlink: { type: "string", required: true, description: "Bitlink (e.g. bit.ly/22u3ypK)" },
+      bitlink: {
+        type: "string",
+        required: true,
+        description: "Bitlink (e.g. bit.ly/22u3ypK)",
+      },
       longUrl: { type: "string", required: false, description: "New long URL" },
       title: { type: "string", required: false, description: "New title" },
-      archived: { type: "boolean", required: false, description: "Archive the link" },
+      archived: {
+        type: "boolean",
+        required: false,
+        description: "Archive the link",
+      },
       group: { type: "string", required: false, description: "Group GUID" },
-      tags: { type: "array", required: false, description: "Array of tag strings" },
+      tags: {
+        type: "array",
+        required: false,
+        description: "Array of tag strings",
+      },
       deeplinks: {
         type: "array",
         required: false,
-        description: "Array of {app_uri_path, install_type, install_url, app_id}",
+        description:
+          "Array of {app_uri_path, install_type, install_url, app_id}",
       },
     },
     async execute(input, ctx) {
-      const { bitlink, longUrl, title, archived, group, tags, deeplinks } = (input ?? {}) as Record<string, unknown>;
+      const { bitlink, longUrl, title, archived, group, tags, deeplinks } =
+        (input ?? {}) as Record<string, unknown>;
       const body: Record<string, unknown> = {};
       if (longUrl) body.long_url = longUrl;
       if (title) body.title = title;

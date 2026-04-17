@@ -37,7 +37,11 @@ async function paginate(
   let page = 1;
 
   while (true) {
-    const data = (await apiRequest(apiKey, "GET", `${endpoint}?page=${page}&per_page=25`)) as {
+    const data = (await apiRequest(
+      apiKey,
+      "GET",
+      `${endpoint}?page=${page}&per_page=25`,
+    )) as {
       _embedded?: Record<string, unknown[]>;
       _links?: { next?: { href: string } };
     };
@@ -84,7 +88,10 @@ export default function actionNetwork(rl: RunlinePluginAPI) {
       personId: { type: "string", required: true, description: "Person ID" },
     },
     async execute(input, ctx) {
-      const { eventId, personId } = input as { eventId: string; personId: string };
+      const { eventId, personId } = input as {
+        eventId: string;
+        personId: string;
+      };
       const body = {
         _links: {
           "osdi:person": {
@@ -105,10 +112,17 @@ export default function actionNetwork(rl: RunlinePluginAPI) {
     description: "Get a specific attendance record",
     inputSchema: {
       eventId: { type: "string", required: true, description: "Event ID" },
-      attendanceId: { type: "string", required: true, description: "Attendance ID" },
+      attendanceId: {
+        type: "string",
+        required: true,
+        description: "Attendance ID",
+      },
     },
     async execute(input, ctx) {
-      const { eventId, attendanceId } = input as { eventId: string; attendanceId: string };
+      const { eventId, attendanceId } = input as {
+        eventId: string;
+        attendanceId: string;
+      };
       return apiRequest(
         ctx.connection.config.apiKey as string,
         "GET",
@@ -121,7 +135,11 @@ export default function actionNetwork(rl: RunlinePluginAPI) {
     description: "List attendances for an event",
     inputSchema: {
       eventId: { type: "string", required: true, description: "Event ID" },
-      limit: { type: "number", required: false, description: "Max results to return" },
+      limit: {
+        type: "number",
+        required: false,
+        description: "Max results to return",
+      },
     },
     async execute(input, ctx) {
       const { eventId, limit } = input as { eventId: string; limit?: number };
@@ -140,15 +158,34 @@ export default function actionNetwork(rl: RunlinePluginAPI) {
     description: "Create a new event",
     inputSchema: {
       title: { type: "string", required: true, description: "Event title" },
-      originSystem: { type: "string", required: true, description: "Origin system identifier" },
-      description: { type: "string", required: false, description: "Event description" },
+      originSystem: {
+        type: "string",
+        required: true,
+        description: "Origin system identifier",
+      },
+      description: {
+        type: "string",
+        required: false,
+        description: "Event description",
+      },
     },
     async execute(input, ctx) {
-      const { title, originSystem, description, ...rest } = input as Record<string, unknown>;
-      const body: Record<string, unknown> = { title, origin_system: originSystem };
+      const { title, originSystem, description, ...rest } = input as Record<
+        string,
+        unknown
+      >;
+      const body: Record<string, unknown> = {
+        title,
+        origin_system: originSystem,
+      };
       if (description) body.description = description;
       Object.assign(body, rest);
-      return apiRequest(ctx.connection.config.apiKey as string, "POST", "/events", body);
+      return apiRequest(
+        ctx.connection.config.apiKey as string,
+        "POST",
+        "/events",
+        body,
+      );
     },
   });
 
@@ -159,18 +196,31 @@ export default function actionNetwork(rl: RunlinePluginAPI) {
     },
     async execute(input, ctx) {
       const { eventId } = input as { eventId: string };
-      return apiRequest(ctx.connection.config.apiKey as string, "GET", `/events/${eventId}`);
+      return apiRequest(
+        ctx.connection.config.apiKey as string,
+        "GET",
+        `/events/${eventId}`,
+      );
     },
   });
 
   rl.registerAction("event.list", {
     description: "List all events",
     inputSchema: {
-      limit: { type: "number", required: false, description: "Max results to return" },
+      limit: {
+        type: "number",
+        required: false,
+        description: "Max results to return",
+      },
     },
     async execute(input, ctx) {
       const { limit } = (input as { limit?: number }) ?? {};
-      return paginate(ctx.connection.config.apiKey as string, "/events", "osdi:events", limit);
+      return paginate(
+        ctx.connection.config.apiKey as string,
+        "/events",
+        "osdi:events",
+        limit,
+      );
     },
   });
 
@@ -184,16 +234,26 @@ export default function actionNetwork(rl: RunlinePluginAPI) {
       familyName: { type: "string", required: false, description: "Last name" },
     },
     async execute(input, ctx) {
-      const { email, givenName, familyName, ...rest } = input as Record<string, unknown>;
+      const { email, givenName, familyName, ...rest } = input as Record<
+        string,
+        unknown
+      >;
       const body: Record<string, unknown> = {
         person: {
-          email_addresses: [{ address: email, primary: true, status: "subscribed" }],
+          email_addresses: [
+            { address: email, primary: true, status: "subscribed" },
+          ],
           ...(givenName ? { given_name: givenName } : {}),
           ...(familyName ? { family_name: familyName } : {}),
           ...rest,
         },
       };
-      return apiRequest(ctx.connection.config.apiKey as string, "POST", "/people", body);
+      return apiRequest(
+        ctx.connection.config.apiKey as string,
+        "POST",
+        "/people",
+        body,
+      );
     },
   });
 
@@ -204,18 +264,31 @@ export default function actionNetwork(rl: RunlinePluginAPI) {
     },
     async execute(input, ctx) {
       const { personId } = input as { personId: string };
-      return apiRequest(ctx.connection.config.apiKey as string, "GET", `/people/${personId}`);
+      return apiRequest(
+        ctx.connection.config.apiKey as string,
+        "GET",
+        `/people/${personId}`,
+      );
     },
   });
 
   rl.registerAction("person.list", {
     description: "List all people",
     inputSchema: {
-      limit: { type: "number", required: false, description: "Max results to return" },
+      limit: {
+        type: "number",
+        required: false,
+        description: "Max results to return",
+      },
     },
     async execute(input, ctx) {
       const { limit } = (input as { limit?: number }) ?? {};
-      return paginate(ctx.connection.config.apiKey as string, "/people", "osdi:people", limit);
+      return paginate(
+        ctx.connection.config.apiKey as string,
+        "/people",
+        "osdi:people",
+        limit,
+      );
     },
   });
 
@@ -227,7 +300,10 @@ export default function actionNetwork(rl: RunlinePluginAPI) {
       familyName: { type: "string", required: false, description: "Last name" },
     },
     async execute(input, ctx) {
-      const { personId, givenName, familyName, ...rest } = input as Record<string, unknown>;
+      const { personId, givenName, familyName, ...rest } = input as Record<
+        string,
+        unknown
+      >;
       const body: Record<string, unknown> = { ...rest };
       if (givenName !== undefined) body.given_name = givenName;
       if (familyName !== undefined) body.family_name = familyName;
@@ -246,23 +322,49 @@ export default function actionNetwork(rl: RunlinePluginAPI) {
     description: "Create a new petition",
     inputSchema: {
       title: { type: "string", required: true, description: "Petition title" },
-      originSystem: { type: "string", required: true, description: "Origin system identifier" },
-      target: { type: "string", required: false, description: "Comma-separated list of targets" },
+      originSystem: {
+        type: "string",
+        required: true,
+        description: "Origin system identifier",
+      },
+      target: {
+        type: "string",
+        required: false,
+        description: "Comma-separated list of targets",
+      },
     },
     async execute(input, ctx) {
-      const { title, originSystem, target, ...rest } = input as Record<string, unknown>;
-      const body: Record<string, unknown> = { title, origin_system: originSystem, ...rest };
+      const { title, originSystem, target, ...rest } = input as Record<
+        string,
+        unknown
+      >;
+      const body: Record<string, unknown> = {
+        title,
+        origin_system: originSystem,
+        ...rest,
+      };
       if (target) {
-        body.target = (target as string).split(",").map((t) => ({ name: t.trim() }));
+        body.target = (target as string)
+          .split(",")
+          .map((t) => ({ name: t.trim() }));
       }
-      return apiRequest(ctx.connection.config.apiKey as string, "POST", "/petitions", body);
+      return apiRequest(
+        ctx.connection.config.apiKey as string,
+        "POST",
+        "/petitions",
+        body,
+      );
     },
   });
 
   rl.registerAction("petition.get", {
     description: "Get a specific petition",
     inputSchema: {
-      petitionId: { type: "string", required: true, description: "Petition ID" },
+      petitionId: {
+        type: "string",
+        required: true,
+        description: "Petition ID",
+      },
     },
     async execute(input, ctx) {
       const { petitionId } = input as { petitionId: string };
@@ -277,7 +379,11 @@ export default function actionNetwork(rl: RunlinePluginAPI) {
   rl.registerAction("petition.list", {
     description: "List all petitions",
     inputSchema: {
-      limit: { type: "number", required: false, description: "Max results to return" },
+      limit: {
+        type: "number",
+        required: false,
+        description: "Max results to return",
+      },
     },
     async execute(input, ctx) {
       const { limit } = (input as { limit?: number }) ?? {};
@@ -293,15 +399,25 @@ export default function actionNetwork(rl: RunlinePluginAPI) {
   rl.registerAction("petition.update", {
     description: "Update a petition",
     inputSchema: {
-      petitionId: { type: "string", required: true, description: "Petition ID" },
+      petitionId: {
+        type: "string",
+        required: true,
+        description: "Petition ID",
+      },
       title: { type: "string", required: false, description: "Petition title" },
-      target: { type: "string", required: false, description: "Comma-separated list of targets" },
+      target: {
+        type: "string",
+        required: false,
+        description: "Comma-separated list of targets",
+      },
     },
     async execute(input, ctx) {
       const { petitionId, target, ...rest } = input as Record<string, unknown>;
       const body: Record<string, unknown> = { ...rest };
       if (target) {
-        body.target = (target as string).split(",").map((t) => ({ name: t.trim() }));
+        body.target = (target as string)
+          .split(",")
+          .map((t) => ({ name: t.trim() }));
       }
       return apiRequest(
         ctx.connection.config.apiKey as string,
@@ -317,11 +433,18 @@ export default function actionNetwork(rl: RunlinePluginAPI) {
   rl.registerAction("signature.create", {
     description: "Add a signature to a petition",
     inputSchema: {
-      petitionId: { type: "string", required: true, description: "Petition ID" },
+      petitionId: {
+        type: "string",
+        required: true,
+        description: "Petition ID",
+      },
       personId: { type: "string", required: true, description: "Person ID" },
     },
     async execute(input, ctx) {
-      const { petitionId, personId } = input as { petitionId: string; personId: string };
+      const { petitionId, personId } = input as {
+        petitionId: string;
+        personId: string;
+      };
       const body = {
         _links: {
           "osdi:person": { href: `${BASE_URL}/people/${personId}` },
@@ -339,11 +462,22 @@ export default function actionNetwork(rl: RunlinePluginAPI) {
   rl.registerAction("signature.get", {
     description: "Get a specific signature",
     inputSchema: {
-      petitionId: { type: "string", required: true, description: "Petition ID" },
-      signatureId: { type: "string", required: true, description: "Signature ID" },
+      petitionId: {
+        type: "string",
+        required: true,
+        description: "Petition ID",
+      },
+      signatureId: {
+        type: "string",
+        required: true,
+        description: "Signature ID",
+      },
     },
     async execute(input, ctx) {
-      const { petitionId, signatureId } = input as { petitionId: string; signatureId: string };
+      const { petitionId, signatureId } = input as {
+        petitionId: string;
+        signatureId: string;
+      };
       return apiRequest(
         ctx.connection.config.apiKey as string,
         "GET",
@@ -355,11 +489,22 @@ export default function actionNetwork(rl: RunlinePluginAPI) {
   rl.registerAction("signature.list", {
     description: "List signatures on a petition",
     inputSchema: {
-      petitionId: { type: "string", required: true, description: "Petition ID" },
-      limit: { type: "number", required: false, description: "Max results to return" },
+      petitionId: {
+        type: "string",
+        required: true,
+        description: "Petition ID",
+      },
+      limit: {
+        type: "number",
+        required: false,
+        description: "Max results to return",
+      },
     },
     async execute(input, ctx) {
-      const { petitionId, limit } = input as { petitionId: string; limit?: number };
+      const { petitionId, limit } = input as {
+        petitionId: string;
+        limit?: number;
+      };
       return paginate(
         ctx.connection.config.apiKey as string,
         `/petitions/${petitionId}/signatures`,
@@ -372,11 +517,22 @@ export default function actionNetwork(rl: RunlinePluginAPI) {
   rl.registerAction("signature.update", {
     description: "Update a signature",
     inputSchema: {
-      petitionId: { type: "string", required: true, description: "Petition ID" },
-      signatureId: { type: "string", required: true, description: "Signature ID" },
+      petitionId: {
+        type: "string",
+        required: true,
+        description: "Petition ID",
+      },
+      signatureId: {
+        type: "string",
+        required: true,
+        description: "Signature ID",
+      },
     },
     async execute(input, ctx) {
-      const { petitionId, signatureId, ...rest } = input as Record<string, unknown>;
+      const { petitionId, signatureId, ...rest } = input as Record<
+        string,
+        unknown
+      >;
       return apiRequest(
         ctx.connection.config.apiKey as string,
         "PUT",
@@ -395,7 +551,12 @@ export default function actionNetwork(rl: RunlinePluginAPI) {
     },
     async execute(input, ctx) {
       const { name } = input as { name: string };
-      return apiRequest(ctx.connection.config.apiKey as string, "POST", "/tags", { name });
+      return apiRequest(
+        ctx.connection.config.apiKey as string,
+        "POST",
+        "/tags",
+        { name },
+      );
     },
   });
 
@@ -406,18 +567,31 @@ export default function actionNetwork(rl: RunlinePluginAPI) {
     },
     async execute(input, ctx) {
       const { tagId } = input as { tagId: string };
-      return apiRequest(ctx.connection.config.apiKey as string, "GET", `/tags/${tagId}`);
+      return apiRequest(
+        ctx.connection.config.apiKey as string,
+        "GET",
+        `/tags/${tagId}`,
+      );
     },
   });
 
   rl.registerAction("tag.list", {
     description: "List all tags",
     inputSchema: {
-      limit: { type: "number", required: false, description: "Max results to return" },
+      limit: {
+        type: "number",
+        required: false,
+        description: "Max results to return",
+      },
     },
     async execute(input, ctx) {
       const { limit } = (input as { limit?: number }) ?? {};
-      return paginate(ctx.connection.config.apiKey as string, "/tags", "osdi:tags", limit);
+      return paginate(
+        ctx.connection.config.apiKey as string,
+        "/tags",
+        "osdi:tags",
+        limit,
+      );
     },
   });
 
@@ -452,7 +626,10 @@ export default function actionNetwork(rl: RunlinePluginAPI) {
       taggingId: { type: "string", required: true, description: "Tagging ID" },
     },
     async execute(input, ctx) {
-      const { tagId, taggingId } = input as { tagId: string; taggingId: string };
+      const { tagId, taggingId } = input as {
+        tagId: string;
+        taggingId: string;
+      };
       return apiRequest(
         ctx.connection.config.apiKey as string,
         "DELETE",

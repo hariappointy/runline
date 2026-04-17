@@ -95,12 +95,26 @@ export default function baserow(rl: RunlinePluginAPI) {
     description: "Create a row in a table",
     inputSchema: {
       tableId: { type: "string", required: true, description: "Table ID" },
-      fields: { type: "object", required: true, description: "Field values as key-value pairs (use field_N keys or field names)" },
+      fields: {
+        type: "object",
+        required: true,
+        description:
+          "Field values as key-value pairs (use field_N keys or field names)",
+      },
     },
     async execute(input, ctx) {
-      const { tableId, fields } = input as { tableId: string; fields: Record<string, unknown> };
+      const { tableId, fields } = input as {
+        tableId: string;
+        fields: Record<string, unknown>;
+      };
       const { host, token } = getConn(ctx);
-      return apiRequest(host, token, "POST", `/api/database/rows/table/${tableId}/`, fields);
+      return apiRequest(
+        host,
+        token,
+        "POST",
+        `/api/database/rows/table/${tableId}/`,
+        fields,
+      );
     },
   });
 
@@ -113,7 +127,12 @@ export default function baserow(rl: RunlinePluginAPI) {
     async execute(input, ctx) {
       const { tableId, rowId } = input as { tableId: string; rowId: string };
       const { host, token } = getConn(ctx);
-      return apiRequest(host, token, "GET", `/api/database/rows/table/${tableId}/${rowId}/`);
+      return apiRequest(
+        host,
+        token,
+        "GET",
+        `/api/database/rows/table/${tableId}/${rowId}/`,
+      );
     },
   });
 
@@ -122,16 +141,34 @@ export default function baserow(rl: RunlinePluginAPI) {
     inputSchema: {
       tableId: { type: "string", required: true, description: "Table ID" },
       search: { type: "string", required: false, description: "Search query" },
-      orderBy: { type: "string", required: false, description: "Comma-separated field IDs prefixed with +/- (e.g. +field_1,-field_2)" },
-      limit: { type: "number", required: false, description: "Max results to return" },
+      orderBy: {
+        type: "string",
+        required: false,
+        description:
+          "Comma-separated field IDs prefixed with +/- (e.g. +field_1,-field_2)",
+      },
+      limit: {
+        type: "number",
+        required: false,
+        description: "Max results to return",
+      },
     },
     async execute(input, ctx) {
-      const { tableId, search, orderBy, limit } = input as Record<string, unknown>;
+      const { tableId, search, orderBy, limit } = input as Record<
+        string,
+        unknown
+      >;
       const { host, token } = getConn(ctx);
       const qs: Record<string, unknown> = {};
       if (search) qs.search = search;
       if (orderBy) qs.order_by = orderBy;
-      return paginateAll(host, token, `/api/database/rows/table/${tableId}/`, qs, limit as number | undefined);
+      return paginateAll(
+        host,
+        token,
+        `/api/database/rows/table/${tableId}/`,
+        qs,
+        limit as number | undefined,
+      );
     },
   });
 
@@ -140,7 +177,11 @@ export default function baserow(rl: RunlinePluginAPI) {
     inputSchema: {
       tableId: { type: "string", required: true, description: "Table ID" },
       rowId: { type: "string", required: true, description: "Row ID" },
-      fields: { type: "object", required: true, description: "Fields to update" },
+      fields: {
+        type: "object",
+        required: true,
+        description: "Fields to update",
+      },
     },
     async execute(input, ctx) {
       const { tableId, rowId, fields } = input as {
@@ -149,7 +190,13 @@ export default function baserow(rl: RunlinePluginAPI) {
         fields: Record<string, unknown>;
       };
       const { host, token } = getConn(ctx);
-      return apiRequest(host, token, "PATCH", `/api/database/rows/table/${tableId}/${rowId}/`, fields);
+      return apiRequest(
+        host,
+        token,
+        "PATCH",
+        `/api/database/rows/table/${tableId}/${rowId}/`,
+        fields,
+      );
     },
   });
 
@@ -162,7 +209,12 @@ export default function baserow(rl: RunlinePluginAPI) {
     async execute(input, ctx) {
       const { tableId, rowId } = input as { tableId: string; rowId: string };
       const { host, token } = getConn(ctx);
-      await apiRequest(host, token, "DELETE", `/api/database/rows/table/${tableId}/${rowId}/`);
+      await apiRequest(
+        host,
+        token,
+        "DELETE",
+        `/api/database/rows/table/${tableId}/${rowId}/`,
+      );
       return { success: true };
     },
   });
@@ -171,12 +223,22 @@ export default function baserow(rl: RunlinePluginAPI) {
     description: "Create up to 200 rows in one request",
     inputSchema: {
       tableId: { type: "string", required: true, description: "Table ID" },
-      items: { type: "array", required: true, description: "Array of row objects with field values" },
+      items: {
+        type: "array",
+        required: true,
+        description: "Array of row objects with field values",
+      },
     },
     async execute(input, ctx) {
       const { tableId, items } = input as { tableId: string; items: unknown[] };
       const { host, token } = getConn(ctx);
-      return apiRequest(host, token, "POST", `/api/database/rows/table/${tableId}/batch/`, { items });
+      return apiRequest(
+        host,
+        token,
+        "POST",
+        `/api/database/rows/table/${tableId}/batch/`,
+        { items },
+      );
     },
   });
 
@@ -184,12 +246,22 @@ export default function baserow(rl: RunlinePluginAPI) {
     description: "Update up to 200 rows in one request",
     inputSchema: {
       tableId: { type: "string", required: true, description: "Table ID" },
-      items: { type: "array", required: true, description: "Array of { id, ...fields } objects" },
+      items: {
+        type: "array",
+        required: true,
+        description: "Array of { id, ...fields } objects",
+      },
     },
     async execute(input, ctx) {
       const { tableId, items } = input as { tableId: string; items: unknown[] };
       const { host, token } = getConn(ctx);
-      return apiRequest(host, token, "PATCH", `/api/database/rows/table/${tableId}/batch/`, { items });
+      return apiRequest(
+        host,
+        token,
+        "PATCH",
+        `/api/database/rows/table/${tableId}/batch/`,
+        { items },
+      );
     },
   });
 
@@ -197,14 +269,27 @@ export default function baserow(rl: RunlinePluginAPI) {
     description: "Delete up to 200 rows in one request",
     inputSchema: {
       tableId: { type: "string", required: true, description: "Table ID" },
-      rowIds: { type: "array", required: true, description: "Array of row IDs to delete" },
+      rowIds: {
+        type: "array",
+        required: true,
+        description: "Array of row IDs to delete",
+      },
     },
     async execute(input, ctx) {
-      const { tableId, rowIds } = input as { tableId: string; rowIds: string[] };
+      const { tableId, rowIds } = input as {
+        tableId: string;
+        rowIds: string[];
+      };
       const { host, token } = getConn(ctx);
-      await apiRequest(host, token, "POST", `/api/database/rows/table/${tableId}/batch-delete/`, {
-        items: rowIds,
-      });
+      await apiRequest(
+        host,
+        token,
+        "POST",
+        `/api/database/rows/table/${tableId}/batch-delete/`,
+        {
+          items: rowIds,
+        },
+      );
       return { success: true, deleted: rowIds };
     },
   });

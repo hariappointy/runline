@@ -1,8 +1,12 @@
 import type { RunlinePluginAPI } from "runline";
 
 async function apiRequest(
-  host: string, token: string, method: string, endpoint: string,
-  body?: Record<string, unknown>, qs?: Record<string, unknown>,
+  host: string,
+  token: string,
+  method: string,
+  endpoint: string,
+  body?: Record<string, unknown>,
+  qs?: Record<string, unknown>,
 ): Promise<unknown> {
   const url = new URL(`${host}${endpoint}`);
   if (qs) {
@@ -24,18 +28,34 @@ async function apiRequest(
   }
   const opts: RequestInit = {
     method,
-    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
   };
-  if (body && Object.keys(body).length > 0 && method !== "GET" && method !== "DELETE") opts.body = JSON.stringify(body);
+  if (
+    body &&
+    Object.keys(body).length > 0 &&
+    method !== "GET" &&
+    method !== "DELETE"
+  )
+    opts.body = JSON.stringify(body);
   const res = await fetch(url.toString(), opts);
-  if (!res.ok) throw new Error(`Magento API error ${res.status}: ${await res.text()}`);
+  if (!res.ok)
+    throw new Error(`Magento API error ${res.status}: ${await res.text()}`);
   if (res.status === 204) return { success: true };
   const text = await res.text();
-  try { return JSON.parse(text); } catch { return text; }
+  try {
+    return JSON.parse(text);
+  } catch {
+    return text;
+  }
 }
 
 async function searchAll(
-  host: string, token: string, endpoint: string,
+  host: string,
+  token: string,
+  endpoint: string,
   searchCriteria: Record<string, unknown> = {},
 ): Promise<unknown[]> {
   const all: unknown[] = [];
@@ -44,7 +64,9 @@ async function searchAll(
   let totalCount = Infinity;
   while (all.length < totalCount) {
     searchCriteria.current_page = currentPage;
-    const data = (await apiRequest(host, token, "GET", endpoint, undefined, { search_criteria: searchCriteria })) as Record<string, unknown>;
+    const data = (await apiRequest(host, token, "GET", endpoint, undefined, {
+      search_criteria: searchCriteria,
+    })) as Record<string, unknown>;
     totalCount = (data.total_count as number) ?? 0;
     const items = data.items as unknown[];
     if (items) all.push(...items);
@@ -59,8 +81,18 @@ export default function magento(rl: RunlinePluginAPI) {
   rl.setVersion("0.1.0");
 
   rl.setConnectionSchema({
-    host: { type: "string", required: true, description: "Magento store URL (e.g. https://mystore.com)", env: "MAGENTO_HOST" },
-    accessToken: { type: "string", required: true, description: "Integration access token", env: "MAGENTO_ACCESS_TOKEN" },
+    host: {
+      type: "string",
+      required: true,
+      description: "Magento store URL (e.g. https://mystore.com)",
+      env: "MAGENTO_HOST",
+    },
+    accessToken: {
+      type: "string",
+      required: true,
+      description: "Integration access token",
+      env: "MAGENTO_ACCESS_TOKEN",
+    },
   });
 
   const conn = (ctx: { connection: { config: Record<string, unknown> } }) => ({
@@ -77,19 +109,43 @@ export default function magento(rl: RunlinePluginAPI) {
       firstname: { type: "string", required: true },
       lastname: { type: "string", required: true },
       password: { type: "string", required: false },
-      addresses: { type: "array", required: false, description: "Array of address objects (street as string, city, postcode, country_id, firstname, lastname, telephone required)" },
-      customAttributes: { type: "array", required: false, description: "Array of {attribute_code, value} objects" },
-      additionalFields: { type: "object", required: false, description: "middlename, prefix, suffix, dob, gender (1=male,2=female,3=unspecified), group_id, store_id, website_id, etc." },
+      addresses: {
+        type: "array",
+        required: false,
+        description:
+          "Array of address objects (street as string, city, postcode, country_id, firstname, lastname, telephone required)",
+      },
+      customAttributes: {
+        type: "array",
+        required: false,
+        description: "Array of {attribute_code, value} objects",
+      },
+      additionalFields: {
+        type: "object",
+        required: false,
+        description:
+          "middlename, prefix, suffix, dob, gender (1=male,2=female,3=unspecified), group_id, store_id, website_id, etc.",
+      },
     },
     async execute(input, ctx) {
-      const { email, firstname, lastname, password, addresses, customAttributes, additionalFields } = input as Record<string, unknown>;
+      const {
+        email,
+        firstname,
+        lastname,
+        password,
+        addresses,
+        customAttributes,
+        additionalFields,
+      } = input as Record<string, unknown>;
       const { host, token } = conn(ctx);
       const customer: Record<string, unknown> = { email, firstname, lastname };
       if (addresses && Array.isArray(addresses)) {
-        customer.addresses = (addresses as Array<Record<string, unknown>>).map((a) => ({
-          ...a,
-          street: Array.isArray(a.street) ? a.street : [a.street],
-        }));
+        customer.addresses = (addresses as Array<Record<string, unknown>>).map(
+          (a) => ({
+            ...a,
+            street: Array.isArray(a.street) ? a.street : [a.street],
+          }),
+        );
       }
       if (customAttributes) customer.custom_attributes = customAttributes;
       if (additionalFields) Object.assign(customer, additionalFields);
@@ -104,25 +160,56 @@ export default function magento(rl: RunlinePluginAPI) {
     inputSchema: { customerId: { type: "number", required: true } },
     async execute(input, ctx) {
       const { host, token } = conn(ctx);
-      return apiRequest(host, token, "GET", `/rest/default/V1/customers/${(input as { customerId: number }).customerId}`);
+      return apiRequest(
+        host,
+        token,
+        "GET",
+        `/rest/default/V1/customers/${(input as { customerId: number }).customerId}`,
+      );
     },
   });
 
   rl.registerAction("customer.list", {
     description: "Search/list customers using Magento search_criteria",
     inputSchema: {
-      searchCriteria: { type: "object", required: false, description: "Magento search_criteria object (filter_groups, sort_orders, page_size). Omit for all." },
-      limit: { type: "number", required: false, description: "Max results (if not using searchCriteria)" },
+      searchCriteria: {
+        type: "object",
+        required: false,
+        description:
+          "Magento search_criteria object (filter_groups, sort_orders, page_size). Omit for all.",
+      },
+      limit: {
+        type: "number",
+        required: false,
+        description: "Max results (if not using searchCriteria)",
+      },
     },
     async execute(input, ctx) {
-      const { searchCriteria, limit } = (input ?? {}) as Record<string, unknown>;
+      const { searchCriteria, limit } = (input ?? {}) as Record<
+        string,
+        unknown
+      >;
       const { host, token } = conn(ctx);
       if (searchCriteria) {
-        const data = await apiRequest(host, token, "GET", "/rest/default/V1/customers/search", undefined, { search_criteria: searchCriteria }) as Record<string, unknown>;
+        const data = (await apiRequest(
+          host,
+          token,
+          "GET",
+          "/rest/default/V1/customers/search",
+          undefined,
+          { search_criteria: searchCriteria },
+        )) as Record<string, unknown>;
         return data.items;
       }
       if (limit) {
-        const data = await apiRequest(host, token, "GET", "/rest/default/V1/customers/search", undefined, { search_criteria: { page_size: limit } }) as Record<string, unknown>;
+        const data = (await apiRequest(
+          host,
+          token,
+          "GET",
+          "/rest/default/V1/customers/search",
+          undefined,
+          { search_criteria: { page_size: limit } },
+        )) as Record<string, unknown>;
         return data.items;
       }
       return searchAll(host, token, "/rest/default/V1/customers/search");
@@ -136,23 +223,50 @@ export default function magento(rl: RunlinePluginAPI) {
       email: { type: "string", required: true },
       firstname: { type: "string", required: true },
       lastname: { type: "string", required: true },
-      updateFields: { type: "object", required: false, description: "Fields to update (middlename, dob, gender, group_id, etc.)" },
+      updateFields: {
+        type: "object",
+        required: false,
+        description:
+          "Fields to update (middlename, dob, gender, group_id, etc.)",
+      },
       addresses: { type: "array", required: false },
       customAttributes: { type: "array", required: false },
     },
     async execute(input, ctx) {
-      const { customerId, email, firstname, lastname, updateFields, addresses, customAttributes } = input as Record<string, unknown>;
+      const {
+        customerId,
+        email,
+        firstname,
+        lastname,
+        updateFields,
+        addresses,
+        customAttributes,
+      } = input as Record<string, unknown>;
       const { host, token } = conn(ctx);
-      const customer: Record<string, unknown> = { email, firstname, lastname, id: customerId, website_id: 0 };
+      const customer: Record<string, unknown> = {
+        email,
+        firstname,
+        lastname,
+        id: customerId,
+        website_id: 0,
+      };
       if (addresses && Array.isArray(addresses)) {
-        customer.addresses = (addresses as Array<Record<string, unknown>>).map((a) => ({
-          ...a,
-          street: Array.isArray(a.street) ? a.street : [a.street],
-        }));
+        customer.addresses = (addresses as Array<Record<string, unknown>>).map(
+          (a) => ({
+            ...a,
+            street: Array.isArray(a.street) ? a.street : [a.street],
+          }),
+        );
       }
       if (customAttributes) customer.custom_attributes = customAttributes;
       if (updateFields) Object.assign(customer, updateFields);
-      return apiRequest(host, token, "PUT", `/rest/V1/customers/${customerId}`, { customer });
+      return apiRequest(
+        host,
+        token,
+        "PUT",
+        `/rest/V1/customers/${customerId}`,
+        { customer },
+      );
     },
   });
 
@@ -161,7 +275,12 @@ export default function magento(rl: RunlinePluginAPI) {
     inputSchema: { customerId: { type: "number", required: true } },
     async execute(input, ctx) {
       const { host, token } = conn(ctx);
-      await apiRequest(host, token, "DELETE", `/rest/default/V1/customers/${(input as { customerId: number }).customerId}`);
+      await apiRequest(
+        host,
+        token,
+        "DELETE",
+        `/rest/default/V1/customers/${(input as { customerId: number }).customerId}`,
+      );
       return { success: true };
     },
   });
@@ -173,7 +292,12 @@ export default function magento(rl: RunlinePluginAPI) {
     inputSchema: { orderId: { type: "number", required: true } },
     async execute(input, ctx) {
       const { host, token } = conn(ctx);
-      await apiRequest(host, token, "POST", `/rest/default/V1/order/${(input as { orderId: number }).orderId}/invoice`);
+      await apiRequest(
+        host,
+        token,
+        "POST",
+        `/rest/default/V1/order/${(input as { orderId: number }).orderId}/invoice`,
+      );
       return { success: true };
     },
   });
@@ -185,25 +309,51 @@ export default function magento(rl: RunlinePluginAPI) {
     inputSchema: { orderId: { type: "number", required: true } },
     async execute(input, ctx) {
       const { host, token } = conn(ctx);
-      return apiRequest(host, token, "GET", `/rest/default/V1/orders/${(input as { orderId: number }).orderId}`);
+      return apiRequest(
+        host,
+        token,
+        "GET",
+        `/rest/default/V1/orders/${(input as { orderId: number }).orderId}`,
+      );
     },
   });
 
   rl.registerAction("order.list", {
     description: "Search/list orders",
     inputSchema: {
-      searchCriteria: { type: "object", required: false, description: "Magento search_criteria object" },
+      searchCriteria: {
+        type: "object",
+        required: false,
+        description: "Magento search_criteria object",
+      },
       limit: { type: "number", required: false },
     },
     async execute(input, ctx) {
-      const { searchCriteria, limit } = (input ?? {}) as Record<string, unknown>;
+      const { searchCriteria, limit } = (input ?? {}) as Record<
+        string,
+        unknown
+      >;
       const { host, token } = conn(ctx);
       if (searchCriteria) {
-        const data = await apiRequest(host, token, "GET", "/rest/default/V1/orders", undefined, { search_criteria: searchCriteria }) as Record<string, unknown>;
+        const data = (await apiRequest(
+          host,
+          token,
+          "GET",
+          "/rest/default/V1/orders",
+          undefined,
+          { search_criteria: searchCriteria },
+        )) as Record<string, unknown>;
         return data.items;
       }
       if (limit) {
-        const data = await apiRequest(host, token, "GET", "/rest/default/V1/orders", undefined, { search_criteria: { page_size: limit } }) as Record<string, unknown>;
+        const data = (await apiRequest(
+          host,
+          token,
+          "GET",
+          "/rest/default/V1/orders",
+          undefined,
+          { search_criteria: { page_size: limit } },
+        )) as Record<string, unknown>;
         return data.items;
       }
       return searchAll(host, token, "/rest/default/V1/orders");
@@ -215,7 +365,12 @@ export default function magento(rl: RunlinePluginAPI) {
     inputSchema: { orderId: { type: "number", required: true } },
     async execute(input, ctx) {
       const { host, token } = conn(ctx);
-      await apiRequest(host, token, "POST", `/rest/default/V1/orders/${(input as { orderId: number }).orderId}/cancel`);
+      await apiRequest(
+        host,
+        token,
+        "POST",
+        `/rest/default/V1/orders/${(input as { orderId: number }).orderId}/cancel`,
+      );
       return { success: true };
     },
   });
@@ -225,7 +380,12 @@ export default function magento(rl: RunlinePluginAPI) {
     inputSchema: { orderId: { type: "number", required: true } },
     async execute(input, ctx) {
       const { host, token } = conn(ctx);
-      await apiRequest(host, token, "POST", `/rest/default/V1/order/${(input as { orderId: number }).orderId}/ship`);
+      await apiRequest(
+        host,
+        token,
+        "POST",
+        `/rest/default/V1/order/${(input as { orderId: number }).orderId}/ship`,
+      );
       return { success: true };
     },
   });
@@ -239,16 +399,39 @@ export default function magento(rl: RunlinePluginAPI) {
       name: { type: "string", required: true },
       attributeSetId: { type: "number", required: true },
       price: { type: "number", required: true },
-      additionalFields: { type: "object", required: false, description: "status (1=enabled,2=disabled), visibility (1-4), weight, type_id, etc." },
-      customAttributes: { type: "array", required: false, description: "Array of {attribute_code, value}" },
+      additionalFields: {
+        type: "object",
+        required: false,
+        description:
+          "status (1=enabled,2=disabled), visibility (1-4), weight, type_id, etc.",
+      },
+      customAttributes: {
+        type: "array",
+        required: false,
+        description: "Array of {attribute_code, value}",
+      },
     },
     async execute(input, ctx) {
-      const { sku, name, attributeSetId, price, additionalFields, customAttributes } = input as Record<string, unknown>;
+      const {
+        sku,
+        name,
+        attributeSetId,
+        price,
+        additionalFields,
+        customAttributes,
+      } = input as Record<string, unknown>;
       const { host, token } = conn(ctx);
-      const product: Record<string, unknown> = { sku, name, attribute_set_id: attributeSetId, price };
+      const product: Record<string, unknown> = {
+        sku,
+        name,
+        attribute_set_id: attributeSetId,
+        price,
+      };
       if (customAttributes) product.custom_attributes = customAttributes;
       if (additionalFields) Object.assign(product, additionalFields);
-      return apiRequest(host, token, "POST", "/rest/default/V1/products", { product });
+      return apiRequest(host, token, "POST", "/rest/default/V1/products", {
+        product,
+      });
     },
   });
 
@@ -257,7 +440,12 @@ export default function magento(rl: RunlinePluginAPI) {
     inputSchema: { sku: { type: "string", required: true } },
     async execute(input, ctx) {
       const { host, token } = conn(ctx);
-      return apiRequest(host, token, "GET", `/rest/default/V1/products/${encodeURIComponent((input as { sku: string }).sku)}`);
+      return apiRequest(
+        host,
+        token,
+        "GET",
+        `/rest/default/V1/products/${encodeURIComponent((input as { sku: string }).sku)}`,
+      );
     },
   });
 
@@ -268,14 +456,31 @@ export default function magento(rl: RunlinePluginAPI) {
       limit: { type: "number", required: false },
     },
     async execute(input, ctx) {
-      const { searchCriteria, limit } = (input ?? {}) as Record<string, unknown>;
+      const { searchCriteria, limit } = (input ?? {}) as Record<
+        string,
+        unknown
+      >;
       const { host, token } = conn(ctx);
       if (searchCriteria) {
-        const data = await apiRequest(host, token, "GET", "/rest/default/V1/products", undefined, { search_criteria: searchCriteria }) as Record<string, unknown>;
+        const data = (await apiRequest(
+          host,
+          token,
+          "GET",
+          "/rest/default/V1/products",
+          undefined,
+          { search_criteria: searchCriteria },
+        )) as Record<string, unknown>;
         return data.items;
       }
       if (limit) {
-        const data = await apiRequest(host, token, "GET", "/rest/default/V1/products", undefined, { search_criteria: { page_size: limit } }) as Record<string, unknown>;
+        const data = (await apiRequest(
+          host,
+          token,
+          "GET",
+          "/rest/default/V1/products",
+          undefined,
+          { search_criteria: { page_size: limit } },
+        )) as Record<string, unknown>;
         return data.items;
       }
       return searchAll(host, token, "/rest/default/V1/products");
@@ -286,16 +491,30 @@ export default function magento(rl: RunlinePluginAPI) {
     description: "Update a product by SKU",
     inputSchema: {
       sku: { type: "string", required: true },
-      updateFields: { type: "object", required: true, description: "Fields to update (name, price, status, visibility, weight, attribute_set_id, etc.)" },
+      updateFields: {
+        type: "object",
+        required: true,
+        description:
+          "Fields to update (name, price, status, visibility, weight, attribute_set_id, etc.)",
+      },
       customAttributes: { type: "array", required: false },
     },
     async execute(input, ctx) {
-      const { sku, updateFields, customAttributes } = input as Record<string, unknown>;
+      const { sku, updateFields, customAttributes } = input as Record<
+        string,
+        unknown
+      >;
       const { host, token } = conn(ctx);
       const product: Record<string, unknown> = { sku };
       if (customAttributes) product.custom_attributes = customAttributes;
       Object.assign(product, updateFields);
-      return apiRequest(host, token, "PUT", `/rest/default/V1/products/${encodeURIComponent(sku as string)}`, { product });
+      return apiRequest(
+        host,
+        token,
+        "PUT",
+        `/rest/default/V1/products/${encodeURIComponent(sku as string)}`,
+        { product },
+      );
     },
   });
 
@@ -304,7 +523,12 @@ export default function magento(rl: RunlinePluginAPI) {
     inputSchema: { sku: { type: "string", required: true } },
     async execute(input, ctx) {
       const { host, token } = conn(ctx);
-      await apiRequest(host, token, "DELETE", `/rest/default/V1/products/${encodeURIComponent((input as { sku: string }).sku)}`);
+      await apiRequest(
+        host,
+        token,
+        "DELETE",
+        `/rest/default/V1/products/${encodeURIComponent((input as { sku: string }).sku)}`,
+      );
       return { success: true };
     },
   });

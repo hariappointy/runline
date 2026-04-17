@@ -29,23 +29,35 @@ async function apiRequest(
       Authorization: `Bearer ${apiKey}`,
     },
   };
-  if (body && Object.keys(body).length > 0 && method !== "GET" && method !== "DELETE") {
+  if (
+    body &&
+    Object.keys(body).length > 0 &&
+    method !== "GET" &&
+    method !== "DELETE"
+  ) {
     opts.body = JSON.stringify(body);
   }
   const res = await fetch(url.toString(), opts);
-  if (!res.ok) throw new Error(`Currents API error ${res.status}: ${await res.text()}`);
+  if (!res.ok)
+    throw new Error(`Currents API error ${res.status}: ${await res.text()}`);
   if (res.status === 204) return { success: true };
   return res.json();
 }
 
 function unwrapData(response: unknown): unknown {
-  if (response && typeof response === "object" && "data" in (response as Record<string, unknown>)) {
+  if (
+    response &&
+    typeof response === "object" &&
+    "data" in (response as Record<string, unknown>)
+  ) {
     return (response as Record<string, unknown>).data;
   }
   return response;
 }
 
-function getKey(ctx: { connection: { config: Record<string, unknown> } }): string {
+function getKey(ctx: {
+  connection: { config: Record<string, unknown> };
+}): string {
   return ctx.connection.config.apiKey as string;
 }
 
@@ -69,38 +81,82 @@ export default function currents(rl: RunlinePluginAPI) {
     inputSchema: {
       projectId: { type: "string", required: true, description: "Project ID" },
       name: { type: "string", required: true, description: "Action name" },
-      actionType: { type: "string", required: true, description: "Type: skip, quarantine, or tag" },
-      matcherType: { type: "string", required: true, description: "Matcher: titleContains, titleEquals, specContains, specEquals, signature" },
-      matcherValue: { type: "string", required: true, description: "Value to match against" },
-      tags: { type: "array", required: false, description: "Tags to apply (for tag action type)" },
-      description: { type: "string", required: false, description: "Description" },
-      expiresAfter: { type: "string", required: false, description: "Expiration date (ISO 8601)" },
+      actionType: {
+        type: "string",
+        required: true,
+        description: "Type: skip, quarantine, or tag",
+      },
+      matcherType: {
+        type: "string",
+        required: true,
+        description:
+          "Matcher: titleContains, titleEquals, specContains, specEquals, signature",
+      },
+      matcherValue: {
+        type: "string",
+        required: true,
+        description: "Value to match against",
+      },
+      tags: {
+        type: "array",
+        required: false,
+        description: "Tags to apply (for tag action type)",
+      },
+      description: {
+        type: "string",
+        required: false,
+        description: "Description",
+      },
+      expiresAfter: {
+        type: "string",
+        required: false,
+        description: "Expiration date (ISO 8601)",
+      },
     },
     async execute(input, ctx) {
-      const { projectId, name, actionType, matcherType, matcherValue, tags, description: desc, expiresAfter } =
-        input as Record<string, unknown>;
+      const {
+        projectId,
+        name,
+        actionType,
+        matcherType,
+        matcherValue,
+        tags,
+        description: desc,
+        expiresAfter,
+      } = input as Record<string, unknown>;
 
       const typeMap: Record<string, string> = {
-        titleContains: "title", titleEquals: "title",
-        specContains: "file", specEquals: "file",
+        titleContains: "title",
+        titleEquals: "title",
+        specContains: "file",
+        specEquals: "file",
         signature: "testId",
       };
       const opMap: Record<string, string> = {
-        titleContains: "inc", titleEquals: "eq",
-        specContains: "inc", specEquals: "eq",
+        titleContains: "inc",
+        titleEquals: "eq",
+        specContains: "inc",
+        specEquals: "eq",
         signature: "eq",
       };
 
-      const action = actionType === "tag" && tags
-        ? [{ op: "tag", details: { tags } }]
-        : [{ op: actionType }];
+      const action =
+        actionType === "tag" && tags
+          ? [{ op: "tag", details: { tags } }]
+          : [{ op: actionType }];
 
       const body: Record<string, unknown> = {
         name,
         action,
         matcher: {
           op: "AND",
-          cond: [{ type: typeMap[matcherType as string], op: opMap[matcherType as string], value: matcherValue }],
+          cond: [
+            {
+              type: typeMap[matcherType as string],
+              op: opMap[matcherType as string],
+              value: matcherValue,
+            },
+          ],
         },
       };
       if (desc) body.description = desc;
@@ -112,9 +168,17 @@ export default function currents(rl: RunlinePluginAPI) {
 
   rl.registerAction("action.get", {
     description: "Get an action by ID",
-    inputSchema: { actionId: { type: "string", required: true, description: "Action ID" } },
+    inputSchema: {
+      actionId: { type: "string", required: true, description: "Action ID" },
+    },
     async execute(input, ctx) {
-      return unwrapData(await apiRequest(getKey(ctx), "GET", `/actions/${(input as { actionId: string }).actionId}`));
+      return unwrapData(
+        await apiRequest(
+          getKey(ctx),
+          "GET",
+          `/actions/${(input as { actionId: string }).actionId}`,
+        ),
+      );
     },
   });
 
@@ -122,15 +186,28 @@ export default function currents(rl: RunlinePluginAPI) {
     description: "List actions for a project",
     inputSchema: {
       projectId: { type: "string", required: true, description: "Project ID" },
-      search: { type: "string", required: false, description: "Search by name" },
-      status: { type: "array", required: false, description: "Filter by status: active, disabled, archived, expired" },
+      search: {
+        type: "string",
+        required: false,
+        description: "Search by name",
+      },
+      status: {
+        type: "array",
+        required: false,
+        description: "Filter by status: active, disabled, archived, expired",
+      },
     },
     async execute(input, ctx) {
-      const { projectId, search, status } = (input ?? {}) as Record<string, unknown>;
+      const { projectId, search, status } = (input ?? {}) as Record<
+        string,
+        unknown
+      >;
       const qs: Record<string, unknown> = { projectId };
       if (search) qs.search = search;
       if (status) qs.status = status;
-      return unwrapData(await apiRequest(getKey(ctx), "GET", "/actions", undefined, qs));
+      return unwrapData(
+        await apiRequest(getKey(ctx), "GET", "/actions", undefined, qs),
+      );
     },
   });
 
@@ -139,8 +216,16 @@ export default function currents(rl: RunlinePluginAPI) {
     inputSchema: {
       actionId: { type: "string", required: true, description: "Action ID" },
       name: { type: "string", required: false, description: "New name" },
-      description: { type: "string", required: false, description: "New description" },
-      expiresAfter: { type: "string", required: false, description: "Expiration date" },
+      description: {
+        type: "string",
+        required: false,
+        description: "New description",
+      },
+      expiresAfter: {
+        type: "string",
+        required: false,
+        description: "Expiration date",
+      },
     },
     async execute(input, ctx) {
       const { actionId, ...body } = input as Record<string, unknown>;
@@ -150,25 +235,43 @@ export default function currents(rl: RunlinePluginAPI) {
 
   rl.registerAction("action.enable", {
     description: "Enable a disabled action",
-    inputSchema: { actionId: { type: "string", required: true, description: "Action ID" } },
+    inputSchema: {
+      actionId: { type: "string", required: true, description: "Action ID" },
+    },
     async execute(input, ctx) {
-      return apiRequest(getKey(ctx), "PUT", `/actions/${(input as { actionId: string }).actionId}/enable`);
+      return apiRequest(
+        getKey(ctx),
+        "PUT",
+        `/actions/${(input as { actionId: string }).actionId}/enable`,
+      );
     },
   });
 
   rl.registerAction("action.disable", {
     description: "Disable an active action",
-    inputSchema: { actionId: { type: "string", required: true, description: "Action ID" } },
+    inputSchema: {
+      actionId: { type: "string", required: true, description: "Action ID" },
+    },
     async execute(input, ctx) {
-      return apiRequest(getKey(ctx), "PUT", `/actions/${(input as { actionId: string }).actionId}/disable`);
+      return apiRequest(
+        getKey(ctx),
+        "PUT",
+        `/actions/${(input as { actionId: string }).actionId}/disable`,
+      );
     },
   });
 
   rl.registerAction("action.delete", {
     description: "Archive (soft delete) an action",
-    inputSchema: { actionId: { type: "string", required: true, description: "Action ID" } },
+    inputSchema: {
+      actionId: { type: "string", required: true, description: "Action ID" },
+    },
     async execute(input, ctx) {
-      await apiRequest(getKey(ctx), "DELETE", `/actions/${(input as { actionId: string }).actionId}`);
+      await apiRequest(
+        getKey(ctx),
+        "DELETE",
+        `/actions/${(input as { actionId: string }).actionId}`,
+      );
       return { success: true };
     },
   });
@@ -177,9 +280,21 @@ export default function currents(rl: RunlinePluginAPI) {
 
   rl.registerAction("instance.get", {
     description: "Get a spec file execution instance with full test results",
-    inputSchema: { instanceId: { type: "string", required: true, description: "Instance ID" } },
+    inputSchema: {
+      instanceId: {
+        type: "string",
+        required: true,
+        description: "Instance ID",
+      },
+    },
     async execute(input, ctx) {
-      return unwrapData(await apiRequest(getKey(ctx), "GET", `/instances/${(input as { instanceId: string }).instanceId}`));
+      return unwrapData(
+        await apiRequest(
+          getKey(ctx),
+          "GET",
+          `/instances/${(input as { instanceId: string }).instanceId}`,
+        ),
+      );
     },
   });
 
@@ -187,20 +302,30 @@ export default function currents(rl: RunlinePluginAPI) {
 
   rl.registerAction("project.get", {
     description: "Get a project by ID",
-    inputSchema: { projectId: { type: "string", required: true, description: "Project ID" } },
+    inputSchema: {
+      projectId: { type: "string", required: true, description: "Project ID" },
+    },
     async execute(input, ctx) {
-      return apiRequest(getKey(ctx), "GET", `/projects/${(input as { projectId: string }).projectId}`);
+      return apiRequest(
+        getKey(ctx),
+        "GET",
+        `/projects/${(input as { projectId: string }).projectId}`,
+      );
     },
   });
 
   rl.registerAction("project.list", {
     description: "List projects",
-    inputSchema: { limit: { type: "number", required: false, description: "Max results" } },
+    inputSchema: {
+      limit: { type: "number", required: false, description: "Max results" },
+    },
     async execute(input, ctx) {
       const qs: Record<string, unknown> = {};
       const { limit } = (input ?? {}) as { limit?: number };
       if (limit) qs.limit = limit;
-      return unwrapData(await apiRequest(getKey(ctx), "GET", "/projects", undefined, qs));
+      return unwrapData(
+        await apiRequest(getKey(ctx), "GET", "/projects", undefined, qs),
+      );
     },
   });
 
@@ -208,22 +333,60 @@ export default function currents(rl: RunlinePluginAPI) {
     description: "Get project insights and metrics",
     inputSchema: {
       projectId: { type: "string", required: true, description: "Project ID" },
-      dateStart: { type: "string", required: true, description: "Start date (ISO 8601)" },
-      dateEnd: { type: "string", required: true, description: "End date (ISO 8601)" },
-      resolution: { type: "string", required: false, description: "Resolution: 1h, 1d (default), 1w" },
-      branches: { type: "array", required: false, description: "Filter by branches" },
-      authors: { type: "array", required: false, description: "Filter by authors" },
+      dateStart: {
+        type: "string",
+        required: true,
+        description: "Start date (ISO 8601)",
+      },
+      dateEnd: {
+        type: "string",
+        required: true,
+        description: "End date (ISO 8601)",
+      },
+      resolution: {
+        type: "string",
+        required: false,
+        description: "Resolution: 1h, 1d (default), 1w",
+      },
+      branches: {
+        type: "array",
+        required: false,
+        description: "Filter by branches",
+      },
+      authors: {
+        type: "array",
+        required: false,
+        description: "Filter by authors",
+      },
       tags: { type: "array", required: false, description: "Filter by tags" },
     },
     async execute(input, ctx) {
-      const { projectId, dateStart, dateEnd, resolution, branches, authors, tags } =
-        input as Record<string, unknown>;
-      const qs: Record<string, unknown> = { date_start: dateStart, date_end: dateEnd };
+      const {
+        projectId,
+        dateStart,
+        dateEnd,
+        resolution,
+        branches,
+        authors,
+        tags,
+      } = input as Record<string, unknown>;
+      const qs: Record<string, unknown> = {
+        date_start: dateStart,
+        date_end: dateEnd,
+      };
       if (resolution) qs.resolution = resolution;
       if (branches) qs.branches = branches;
       if (authors) qs.authors = authors;
       if (tags) qs.tags = tags;
-      return unwrapData(await apiRequest(getKey(ctx), "GET", `/projects/${projectId}/insights`, undefined, qs));
+      return unwrapData(
+        await apiRequest(
+          getKey(ctx),
+          "GET",
+          `/projects/${projectId}/insights`,
+          undefined,
+          qs,
+        ),
+      );
     },
   });
 
@@ -231,9 +394,17 @@ export default function currents(rl: RunlinePluginAPI) {
 
   rl.registerAction("run.get", {
     description: "Get a run by ID",
-    inputSchema: { runId: { type: "string", required: true, description: "Run ID" } },
+    inputSchema: {
+      runId: { type: "string", required: true, description: "Run ID" },
+    },
     async execute(input, ctx) {
-      return unwrapData(await apiRequest(getKey(ctx), "GET", `/runs/${(input as { runId: string }).runId}`));
+      return unwrapData(
+        await apiRequest(
+          getKey(ctx),
+          "GET",
+          `/runs/${(input as { runId: string }).runId}`,
+        ),
+      );
     },
   });
 
@@ -241,19 +412,53 @@ export default function currents(rl: RunlinePluginAPI) {
     description: "List runs for a project",
     inputSchema: {
       projectId: { type: "string", required: true, description: "Project ID" },
-      limit: { type: "number", required: false, description: "Max results (default: 10, max: 50)" },
-      search: { type: "string", required: false, description: "Search by ciBuildId or commit message" },
-      status: { type: "array", required: false, description: "Filter by status" },
-      completionState: { type: "array", required: false, description: "Filter by completion state" },
-      branches: { type: "array", required: false, description: "Filter by branches" },
-      authors: { type: "array", required: false, description: "Filter by authors" },
+      limit: {
+        type: "number",
+        required: false,
+        description: "Max results (default: 10, max: 50)",
+      },
+      search: {
+        type: "string",
+        required: false,
+        description: "Search by ciBuildId or commit message",
+      },
+      status: {
+        type: "array",
+        required: false,
+        description: "Filter by status",
+      },
+      completionState: {
+        type: "array",
+        required: false,
+        description: "Filter by completion state",
+      },
+      branches: {
+        type: "array",
+        required: false,
+        description: "Filter by branches",
+      },
+      authors: {
+        type: "array",
+        required: false,
+        description: "Filter by authors",
+      },
       tags: { type: "array", required: false, description: "Filter by tags" },
       dateStart: { type: "string", required: false, description: "Start date" },
       dateEnd: { type: "string", required: false, description: "End date" },
     },
     async execute(input, ctx) {
-      const { projectId, limit, search, status, completionState, branches, authors, tags, dateStart, dateEnd } =
-        (input ?? {}) as Record<string, unknown>;
+      const {
+        projectId,
+        limit,
+        search,
+        status,
+        completionState,
+        branches,
+        authors,
+        tags,
+        dateStart,
+        dateEnd,
+      } = (input ?? {}) as Record<string, unknown>;
       const qs: Record<string, unknown> = {};
       if (limit) qs.limit = limit;
       if (search) qs.search = search;
@@ -264,7 +469,15 @@ export default function currents(rl: RunlinePluginAPI) {
       if (tags) qs.tags = tags;
       if (dateStart) qs.date_start = dateStart;
       if (dateEnd) qs.date_end = dateEnd;
-      return unwrapData(await apiRequest(getKey(ctx), "GET", `/projects/${projectId}/runs`, undefined, qs));
+      return unwrapData(
+        await apiRequest(
+          getKey(ctx),
+          "GET",
+          `/projects/${projectId}/runs`,
+          undefined,
+          qs,
+        ),
+      );
     },
   });
 
@@ -272,35 +485,70 @@ export default function currents(rl: RunlinePluginAPI) {
     description: "Find a run by project and filters",
     inputSchema: {
       projectId: { type: "string", required: true, description: "Project ID" },
-      branch: { type: "string", required: false, description: "Filter by branch" },
-      ciBuildId: { type: "string", required: false, description: "Filter by CI build ID" },
+      branch: {
+        type: "string",
+        required: false,
+        description: "Filter by branch",
+      },
+      ciBuildId: {
+        type: "string",
+        required: false,
+        description: "Filter by CI build ID",
+      },
       tags: { type: "array", required: false, description: "Filter by tags" },
     },
     async execute(input, ctx) {
-      const { projectId, branch, ciBuildId, tags } = (input ?? {}) as Record<string, unknown>;
+      const { projectId, branch, ciBuildId, tags } = (input ?? {}) as Record<
+        string,
+        unknown
+      >;
       const qs: Record<string, unknown> = { projectId };
       if (branch) qs.branch = branch;
       if (ciBuildId) qs.ciBuildId = ciBuildId;
       if (tags) qs.tags = tags;
-      return unwrapData(await apiRequest(getKey(ctx), "GET", "/runs/find", undefined, qs));
+      return unwrapData(
+        await apiRequest(getKey(ctx), "GET", "/runs/find", undefined, qs),
+      );
     },
   });
 
   rl.registerAction("run.cancel", {
     description: "Cancel a run in progress",
-    inputSchema: { runId: { type: "string", required: true, description: "Run ID" } },
+    inputSchema: {
+      runId: { type: "string", required: true, description: "Run ID" },
+    },
     async execute(input, ctx) {
-      return apiRequest(getKey(ctx), "PUT", `/runs/${(input as { runId: string }).runId}/cancel`);
+      return apiRequest(
+        getKey(ctx),
+        "PUT",
+        `/runs/${(input as { runId: string }).runId}/cancel`,
+      );
     },
   });
 
   rl.registerAction("run.cancelGithub", {
     description: "Cancel a run by GitHub Actions workflow run ID",
     inputSchema: {
-      githubRunId: { type: "string", required: true, description: "GitHub Actions workflow run ID" },
-      githubRunAttempt: { type: "number", required: true, description: "Workflow attempt number" },
-      projectId: { type: "string", required: false, description: "Limit to specific project" },
-      ciBuildId: { type: "string", required: false, description: "Limit to specific CI build" },
+      githubRunId: {
+        type: "string",
+        required: true,
+        description: "GitHub Actions workflow run ID",
+      },
+      githubRunAttempt: {
+        type: "number",
+        required: true,
+        description: "Workflow attempt number",
+      },
+      projectId: {
+        type: "string",
+        required: false,
+        description: "Limit to specific project",
+      },
+      ciBuildId: {
+        type: "string",
+        required: false,
+        description: "Limit to specific CI build",
+      },
     },
     async execute(input, ctx) {
       const body = input as Record<string, unknown>;
@@ -312,11 +560,22 @@ export default function currents(rl: RunlinePluginAPI) {
     description: "Reset failed specs for re-execution on specified machines",
     inputSchema: {
       runId: { type: "string", required: true, description: "Run ID" },
-      machineIds: { type: "array", required: true, description: "Array of machine identifiers to reset" },
-      isBatchedOr8n: { type: "boolean", required: false, description: "Enable batched orchestration" },
+      machineIds: {
+        type: "array",
+        required: true,
+        description: "Array of machine identifiers to reset",
+      },
+      isBatchedOr8n: {
+        type: "boolean",
+        required: false,
+        description: "Enable batched orchestration",
+      },
     },
     async execute(input, ctx) {
-      const { runId, machineIds, isBatchedOr8n } = input as Record<string, unknown>;
+      const { runId, machineIds, isBatchedOr8n } = input as Record<
+        string,
+        unknown
+      >;
       const body: Record<string, unknown> = { machineId: machineIds };
       if (isBatchedOr8n) body.isBatchedOr8n = true;
       return apiRequest(getKey(ctx), "PUT", `/runs/${runId}/reset`, body);
@@ -325,9 +584,15 @@ export default function currents(rl: RunlinePluginAPI) {
 
   rl.registerAction("run.delete", {
     description: "Delete a run and all associated data",
-    inputSchema: { runId: { type: "string", required: true, description: "Run ID" } },
+    inputSchema: {
+      runId: { type: "string", required: true, description: "Run ID" },
+    },
     async execute(input, ctx) {
-      await apiRequest(getKey(ctx), "DELETE", `/runs/${(input as { runId: string }).runId}`);
+      await apiRequest(
+        getKey(ctx),
+        "DELETE",
+        `/runs/${(input as { runId: string }).runId}`,
+      );
       return { success: true };
     },
   });
@@ -338,11 +603,26 @@ export default function currents(rl: RunlinePluginAPI) {
     description: "Generate a unique test signature",
     inputSchema: {
       projectId: { type: "string", required: true, description: "Project ID" },
-      specFilePath: { type: "string", required: true, description: "Full spec file path" },
-      testTitle: { type: "string", required: true, description: "Test title (use ' > ' for nested describes)" },
+      specFilePath: {
+        type: "string",
+        required: true,
+        description: "Full spec file path",
+      },
+      testTitle: {
+        type: "string",
+        required: true,
+        description: "Test title (use ' > ' for nested describes)",
+      },
     },
     async execute(input, ctx) {
-      return unwrapData(await apiRequest(getKey(ctx), "POST", "/signature/test", input as Record<string, unknown>));
+      return unwrapData(
+        await apiRequest(
+          getKey(ctx),
+          "POST",
+          "/signature/test",
+          input as Record<string, unknown>,
+        ),
+      );
     },
   });
 
@@ -352,19 +632,47 @@ export default function currents(rl: RunlinePluginAPI) {
     description: "Get aggregated spec file metrics for a project",
     inputSchema: {
       projectId: { type: "string", required: true, description: "Project ID" },
-      dateStart: { type: "string", required: true, description: "Start date (ISO 8601)" },
-      dateEnd: { type: "string", required: true, description: "End date (ISO 8601)" },
-      limit: { type: "number", required: false, description: "Max results (default: 50)" },
+      dateStart: {
+        type: "string",
+        required: true,
+        description: "Start date (ISO 8601)",
+      },
+      dateEnd: {
+        type: "string",
+        required: true,
+        description: "End date (ISO 8601)",
+      },
+      limit: {
+        type: "number",
+        required: false,
+        description: "Max results (default: 50)",
+      },
       order: { type: "string", required: false, description: "Order by field" },
-      dir: { type: "string", required: false, description: "Sort direction: asc or desc" },
+      dir: {
+        type: "string",
+        required: false,
+        description: "Sort direction: asc or desc",
+      },
     },
     async execute(input, ctx) {
-      const { projectId, dateStart, dateEnd, limit, order, dir } = input as Record<string, unknown>;
-      const qs: Record<string, unknown> = { date_start: dateStart, date_end: dateEnd };
+      const { projectId, dateStart, dateEnd, limit, order, dir } =
+        input as Record<string, unknown>;
+      const qs: Record<string, unknown> = {
+        date_start: dateStart,
+        date_end: dateEnd,
+      };
       if (limit) qs.limit = limit;
       if (order) qs.order = order;
       if (dir) qs.dir = dir;
-      return unwrapData(await apiRequest(getKey(ctx), "GET", `/spec-files/${projectId}`, undefined, qs));
+      return unwrapData(
+        await apiRequest(
+          getKey(ctx),
+          "GET",
+          `/spec-files/${projectId}`,
+          undefined,
+          qs,
+        ),
+      );
     },
   });
 
@@ -374,24 +682,59 @@ export default function currents(rl: RunlinePluginAPI) {
     description: "Get aggregated test metrics for a project",
     inputSchema: {
       projectId: { type: "string", required: true, description: "Project ID" },
-      dateStart: { type: "string", required: true, description: "Start date (ISO 8601)" },
-      dateEnd: { type: "string", required: true, description: "End date (ISO 8601)" },
-      limit: { type: "number", required: false, description: "Max results (default: 50)" },
+      dateStart: {
+        type: "string",
+        required: true,
+        description: "Start date (ISO 8601)",
+      },
+      dateEnd: {
+        type: "string",
+        required: true,
+        description: "End date (ISO 8601)",
+      },
+      limit: {
+        type: "number",
+        required: false,
+        description: "Max results (default: 50)",
+      },
       order: { type: "string", required: false, description: "Order by field" },
-      dir: { type: "string", required: false, description: "Sort direction: asc or desc" },
-      title: { type: "string", required: false, description: "Filter by test title" },
-      spec: { type: "string", required: false, description: "Filter by spec file" },
+      dir: {
+        type: "string",
+        required: false,
+        description: "Sort direction: asc or desc",
+      },
+      title: {
+        type: "string",
+        required: false,
+        description: "Filter by test title",
+      },
+      spec: {
+        type: "string",
+        required: false,
+        description: "Filter by spec file",
+      },
     },
     async execute(input, ctx) {
       const { projectId, dateStart, dateEnd, limit, order, dir, title, spec } =
         (input ?? {}) as Record<string, unknown>;
-      const qs: Record<string, unknown> = { date_start: dateStart, date_end: dateEnd };
+      const qs: Record<string, unknown> = {
+        date_start: dateStart,
+        date_end: dateEnd,
+      };
       if (limit) qs.limit = limit;
       if (order) qs.order = order;
       if (dir) qs.dir = dir;
       if (title) qs.title = title;
       if (spec) qs.spec = spec;
-      return unwrapData(await apiRequest(getKey(ctx), "GET", `/tests/${projectId}`, undefined, qs));
+      return unwrapData(
+        await apiRequest(
+          getKey(ctx),
+          "GET",
+          `/tests/${projectId}`,
+          undefined,
+          qs,
+        ),
+      );
     },
   });
 
@@ -400,20 +743,56 @@ export default function currents(rl: RunlinePluginAPI) {
   rl.registerAction("testResult.list", {
     description: "Get historical test execution results for a test signature",
     inputSchema: {
-      signature: { type: "string", required: true, description: "Test signature" },
-      dateStart: { type: "string", required: true, description: "Start date (ISO 8601)" },
-      dateEnd: { type: "string", required: true, description: "End date (ISO 8601)" },
-      limit: { type: "number", required: false, description: "Max results (default: 10, max: 100)" },
-      status: { type: "array", required: false, description: "Filter by status: passed, failed, pending, skipped" },
-      branches: { type: "array", required: false, description: "Filter by branches" },
+      signature: {
+        type: "string",
+        required: true,
+        description: "Test signature",
+      },
+      dateStart: {
+        type: "string",
+        required: true,
+        description: "Start date (ISO 8601)",
+      },
+      dateEnd: {
+        type: "string",
+        required: true,
+        description: "End date (ISO 8601)",
+      },
+      limit: {
+        type: "number",
+        required: false,
+        description: "Max results (default: 10, max: 100)",
+      },
+      status: {
+        type: "array",
+        required: false,
+        description: "Filter by status: passed, failed, pending, skipped",
+      },
+      branches: {
+        type: "array",
+        required: false,
+        description: "Filter by branches",
+      },
     },
     async execute(input, ctx) {
-      const { signature, dateStart, dateEnd, limit, status, branches } = input as Record<string, unknown>;
-      const qs: Record<string, unknown> = { date_start: dateStart, date_end: dateEnd };
+      const { signature, dateStart, dateEnd, limit, status, branches } =
+        input as Record<string, unknown>;
+      const qs: Record<string, unknown> = {
+        date_start: dateStart,
+        date_end: dateEnd,
+      };
       if (limit) qs.limit = limit;
       if (status) qs.status = status;
       if (branches) qs.branches = branches;
-      return unwrapData(await apiRequest(getKey(ctx), "GET", `/test-results/${signature}`, undefined, qs));
+      return unwrapData(
+        await apiRequest(
+          getKey(ctx),
+          "GET",
+          `/test-results/${signature}`,
+          undefined,
+          qs,
+        ),
+      );
     },
   });
 }

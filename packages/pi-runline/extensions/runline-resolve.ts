@@ -60,10 +60,7 @@ export function loadExtConfig(runlineDir: string): RunlineExtConfig {
   }
 }
 
-export function savePiPlugins(
-  runlineDir: string,
-  piPlugins: string[],
-): void {
+export function savePiPlugins(runlineDir: string, piPlugins: string[]): void {
   const configPath = path.join(runlineDir, "config.json");
   let raw: Record<string, unknown> = {};
   if (fs.existsSync(configPath)) {

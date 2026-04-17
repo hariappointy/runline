@@ -8,7 +8,9 @@ async function apiRequest(
   body?: Record<string, unknown>,
   qs?: Record<string, unknown>,
 ): Promise<unknown> {
-  const url = new URL(`https://${domain}.myfreshworks.com/crm/sales/api${endpoint}`);
+  const url = new URL(
+    `https://${domain}.myfreshworks.com/crm/sales/api${endpoint}`,
+  );
   if (qs) {
     for (const [k, v] of Object.entries(qs)) {
       if (v !== undefined && v !== null) url.searchParams.set(k, String(v));
@@ -21,20 +23,37 @@ async function apiRequest(
       "Content-Type": "application/json",
     },
   };
-  if (body && Object.keys(body).length > 0 && method !== "GET" && method !== "DELETE") {
+  if (
+    body &&
+    Object.keys(body).length > 0 &&
+    method !== "GET" &&
+    method !== "DELETE"
+  ) {
     opts.body = JSON.stringify(body);
   }
   const res = await fetch(url.toString(), opts);
-  if (!res.ok) throw new Error(`Freshworks CRM API error ${res.status}: ${await res.text()}`);
+  if (!res.ok)
+    throw new Error(
+      `Freshworks CRM API error ${res.status}: ${await res.text()}`,
+    );
   if (res.status === 204) return { success: true };
   return res.json();
 }
 
 function getConn(ctx: { connection: { config: Record<string, unknown> } }) {
-  return { domain: ctx.connection.config.domain as string, apiKey: ctx.connection.config.apiKey as string };
+  return {
+    domain: ctx.connection.config.domain as string,
+    apiKey: ctx.connection.config.apiKey as string,
+  };
 }
 
-function req(ctx: { connection: { config: Record<string, unknown> } }, method: string, endpoint: string, body?: Record<string, unknown>, qs?: Record<string, unknown>) {
+function req(
+  ctx: { connection: { config: Record<string, unknown> } },
+  method: string,
+  endpoint: string,
+  body?: Record<string, unknown>,
+  qs?: Record<string, unknown>,
+) {
   const { domain, apiKey } = getConn(ctx);
   return apiRequest(domain, apiKey, method, endpoint, body, qs);
 }
@@ -56,7 +75,13 @@ function registerCrud(
 ) {
   rl.registerAction(`${resource}.create`, {
     description: `Create a ${resource}`,
-    inputSchema: { properties: { type: "object", required: true, description: `${resource} properties` } },
+    inputSchema: {
+      properties: {
+        type: "object",
+        required: true,
+        description: `${resource} properties`,
+      },
+    },
     async execute(input, ctx) {
       const { properties } = input as { properties: Record<string, unknown> };
       return unwrap(await req(ctx, "POST", apiPath, { [wrapKey]: properties }));
@@ -66,9 +91,13 @@ function registerCrud(
   if (!opts?.noGet) {
     rl.registerAction(`${resource}.get`, {
       description: `Get a ${resource} by ID`,
-      inputSchema: { id: { type: "number", required: true, description: `${resource} ID` } },
+      inputSchema: {
+        id: { type: "number", required: true, description: `${resource} ID` },
+      },
       async execute(input, ctx) {
-        return unwrap(await req(ctx, "GET", `${apiPath}/${(input as { id: number }).id}`));
+        return unwrap(
+          await req(ctx, "GET", `${apiPath}/${(input as { id: number }).id}`),
+        );
       },
     });
   }
@@ -94,18 +123,29 @@ function registerCrud(
     description: `Update a ${resource}`,
     inputSchema: {
       id: { type: "number", required: true, description: `${resource} ID` },
-      properties: { type: "object", required: true, description: "Fields to update" },
+      properties: {
+        type: "object",
+        required: true,
+        description: "Fields to update",
+      },
     },
     async execute(input, ctx) {
-      const { id, properties } = input as { id: number; properties: Record<string, unknown> };
-      return unwrap(await req(ctx, "PUT", `${apiPath}/${id}`, { [wrapKey]: properties }));
+      const { id, properties } = input as {
+        id: number;
+        properties: Record<string, unknown>;
+      };
+      return unwrap(
+        await req(ctx, "PUT", `${apiPath}/${id}`, { [wrapKey]: properties }),
+      );
     },
   });
 
   if (!opts?.noDelete) {
     rl.registerAction(`${resource}.delete`, {
       description: `Delete a ${resource}`,
-      inputSchema: { id: { type: "number", required: true, description: `${resource} ID` } },
+      inputSchema: {
+        id: { type: "number", required: true, description: `${resource} ID` },
+      },
       async execute(input, ctx) {
         await req(ctx, "DELETE", `${apiPath}/${(input as { id: number }).id}`);
         return { success: true };
@@ -119,8 +159,18 @@ export default function freshworksCrm(rl: RunlinePluginAPI) {
   rl.setVersion("0.1.0");
 
   rl.setConnectionSchema({
-    domain: { type: "string", required: true, description: "Freshworks CRM subdomain", env: "FRESHWORKS_CRM_DOMAIN" },
-    apiKey: { type: "string", required: true, description: "Freshworks CRM API key", env: "FRESHWORKS_CRM_API_KEY" },
+    domain: {
+      type: "string",
+      required: true,
+      description: "Freshworks CRM subdomain",
+      env: "FRESHWORKS_CRM_DOMAIN",
+    },
+    apiKey: {
+      type: "string",
+      required: true,
+      description: "Freshworks CRM API key",
+      env: "FRESHWORKS_CRM_API_KEY",
+    },
   });
 
   registerCrud(rl, "account", "/sales_accounts", "sales_account");
@@ -137,12 +187,24 @@ export default function freshworksCrm(rl: RunlinePluginAPI) {
     description: "Search across entities using a query string",
     inputSchema: {
       query: { type: "string", required: true, description: "Search query" },
-      entities: { type: "string", required: false, description: "Comma-separated entities to search (contact, deal, sales_account)" },
-      perPage: { type: "number", required: false, description: "Results per page" },
+      entities: {
+        type: "string",
+        required: false,
+        description:
+          "Comma-separated entities to search (contact, deal, sales_account)",
+      },
+      perPage: {
+        type: "number",
+        required: false,
+        description: "Results per page",
+      },
       page: { type: "number", required: false, description: "Page number" },
     },
     async execute(input, ctx) {
-      const { query, entities, perPage, page } = (input ?? {}) as Record<string, unknown>;
+      const { query, entities, perPage, page } = (input ?? {}) as Record<
+        string,
+        unknown
+      >;
       const qs: Record<string, unknown> = { q: query };
       if (entities) qs.entities = entities;
       if (perPage) qs.per_page = perPage;
@@ -155,8 +217,16 @@ export default function freshworksCrm(rl: RunlinePluginAPI) {
     description: "Lookup a record by field value",
     inputSchema: {
       query: { type: "string", required: true, description: "Value to search" },
-      field: { type: "string", required: true, description: "Field to search (e.g. email, name)" },
-      entities: { type: "string", required: false, description: "Entity type to search" },
+      field: {
+        type: "string",
+        required: true,
+        description: "Field to search (e.g. email, name)",
+      },
+      entities: {
+        type: "string",
+        required: false,
+        description: "Entity type to search",
+      },
     },
     async execute(input, ctx) {
       const { query, field, entities } = input as Record<string, unknown>;

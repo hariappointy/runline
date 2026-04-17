@@ -5,7 +5,12 @@ export default function signl4(rl: RunlinePluginAPI) {
   rl.setVersion("0.1.0");
 
   rl.setConnectionSchema({
-    teamSecret: { type: "string", required: true, description: "SIGNL4 team secret (webhook path)", env: "SIGNL4_TEAM_SECRET" },
+    teamSecret: {
+      type: "string",
+      required: true,
+      description: "SIGNL4 team secret (webhook path)",
+      env: "SIGNL4_TEAM_SECRET",
+    },
   });
 
   const url = (ctx: { connection: { config: Record<string, unknown> } }) =>
@@ -17,8 +22,16 @@ export default function signl4(rl: RunlinePluginAPI) {
       message: { type: "string", required: true },
       title: { type: "string", required: false },
       service: { type: "string", required: false },
-      externalId: { type: "string", required: false, description: "External ID for correlation" },
-      alertingScenario: { type: "string", required: false, description: "single_ack or multi_ack" },
+      externalId: {
+        type: "string",
+        required: false,
+        description: "External ID for correlation",
+      },
+      alertingScenario: {
+        type: "string",
+        required: false,
+        description: "single_ack or multi_ack",
+      },
       latitude: { type: "string", required: false },
       longitude: { type: "string", required: false },
       filtering: { type: "boolean", required: false },
@@ -32,11 +45,15 @@ export default function signl4(rl: RunlinePluginAPI) {
       if (p.title) form.set("title", p.title as string);
       if (p.service) form.set("service", p.service as string);
       if (p.externalId) form.set("X-S4-ExternalID", p.externalId as string);
-      if (p.alertingScenario) form.set("X-S4-AlertingScenario", p.alertingScenario as string);
-      if (p.latitude && p.longitude) form.set("X-S4-Location", `${p.latitude},${p.longitude}`);
-      if (p.filtering !== undefined) form.set("X-S4-Filtering", String(p.filtering));
+      if (p.alertingScenario)
+        form.set("X-S4-AlertingScenario", p.alertingScenario as string);
+      if (p.latitude && p.longitude)
+        form.set("X-S4-Location", `${p.latitude},${p.longitude}`);
+      if (p.filtering !== undefined)
+        form.set("X-S4-Filtering", String(p.filtering));
       const res = await fetch(url(ctx), { method: "POST", body: form });
-      if (!res.ok) throw new Error(`SIGNL4 error ${res.status}: ${await res.text()}`);
+      if (!res.ok)
+        throw new Error(`SIGNL4 error ${res.status}: ${await res.text()}`);
       return res.json();
     },
   });
@@ -53,7 +70,8 @@ export default function signl4(rl: RunlinePluginAPI) {
       form.set("X-S4-Status", "resolved");
       form.set("X-S4-SourceSystem", "runline");
       const res = await fetch(url(ctx), { method: "POST", body: form });
-      if (!res.ok) throw new Error(`SIGNL4 error ${res.status}: ${await res.text()}`);
+      if (!res.ok)
+        throw new Error(`SIGNL4 error ${res.status}: ${await res.text()}`);
       return res.json();
     },
   });

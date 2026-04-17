@@ -1,6 +1,8 @@
 import type { RunlinePluginAPI } from "runline";
 
-interface Conn { config: Record<string, unknown> }
+interface Conn {
+  config: Record<string, unknown>;
+}
 
 function getConn(ctx: { connection: Conn }) {
   const c = ctx.connection.config;
@@ -30,7 +32,8 @@ async function apiRequest(
   };
   if (body && Object.keys(body).length > 0) init.body = JSON.stringify(body);
   const res = await fetch(u.toString(), init);
-  if (!res.ok) throw new Error(`Okta API error ${res.status}: ${await res.text()}`);
+  if (!res.ok)
+    throw new Error(`Okta API error ${res.status}: ${await res.text()}`);
   const text = await res.text();
   const data = text ? JSON.parse(text) : {};
   return { data, linkHeader: res.headers.get("link") ?? undefined };
@@ -46,7 +49,13 @@ async function paginate(
   do {
     if (after) qs.after = after;
     qs.limit = 200;
-    const { data, linkHeader } = await apiRequest(conn, "GET", endpoint, undefined, qs);
+    const { data, linkHeader } = await apiRequest(
+      conn,
+      "GET",
+      endpoint,
+      undefined,
+      qs,
+    );
     const items = Array.isArray(data) ? data : [];
     all.push(...items);
     after = undefined;
@@ -63,8 +72,18 @@ export default function okta(rl: RunlinePluginAPI) {
   rl.setVersion("0.1.0");
 
   rl.setConnectionSchema({
-    url: { type: "string", required: true, description: "Okta org URL (e.g. https://yourorg.okta.com)", env: "OKTA_URL" },
-    apiToken: { type: "string", required: true, description: "Okta API token (SSWS)", env: "OKTA_API_TOKEN" },
+    url: {
+      type: "string",
+      required: true,
+      description: "Okta org URL (e.g. https://yourorg.okta.com)",
+      env: "OKTA_URL",
+    },
+    apiToken: {
+      type: "string",
+      required: true,
+      description: "Okta API token (SSWS)",
+      env: "OKTA_API_TOKEN",
+    },
   });
 
   rl.registerAction("user.create", {
@@ -72,11 +91,24 @@ export default function okta(rl: RunlinePluginAPI) {
     inputSchema: {
       firstName: { type: "string", required: true },
       lastName: { type: "string", required: true },
-      login: { type: "string", required: true, description: "Username (must be email)" },
+      login: {
+        type: "string",
+        required: true,
+        description: "Username (must be email)",
+      },
       email: { type: "string", required: true },
-      activate: { type: "boolean", required: false, description: "Activate user immediately (default true)" },
+      activate: {
+        type: "boolean",
+        required: false,
+        description: "Activate user immediately (default true)",
+      },
       password: { type: "string", required: false },
-      profile: { type: "object", required: false, description: "Additional profile fields (city, department, displayName, etc.)" },
+      profile: {
+        type: "object",
+        required: false,
+        description:
+          "Additional profile fields (city, department, displayName, etc.)",
+      },
     },
     async execute(input, ctx) {
       const p = input as Record<string, unknown>;
@@ -87,14 +119,22 @@ export default function okta(rl: RunlinePluginAPI) {
           lastName: p.lastName,
           login: p.login,
           email: p.email,
-          ...(p.profile as Record<string, unknown> ?? {}),
+          ...((p.profile as Record<string, unknown>) ?? {}),
         },
       };
       if (p.password) {
         body.credentials = { password: { value: p.password } };
       }
-      const qs: Record<string, unknown> = { activate: p.activate !== false ? "true" : "false" };
-      const { data } = await apiRequest(conn, "POST", "/api/v1/users/", body, qs);
+      const qs: Record<string, unknown> = {
+        activate: p.activate !== false ? "true" : "false",
+      };
+      const { data } = await apiRequest(
+        conn,
+        "POST",
+        "/api/v1/users/",
+        body,
+        qs,
+      );
       return data;
     },
   });
@@ -102,11 +142,19 @@ export default function okta(rl: RunlinePluginAPI) {
   rl.registerAction("user.get", {
     description: "Get user details by ID or login",
     inputSchema: {
-      userId: { type: "string", required: true, description: "User ID or login (email)" },
+      userId: {
+        type: "string",
+        required: true,
+        description: "User ID or login (email)",
+      },
     },
     async execute(input, ctx) {
       const { userId } = input as Record<string, unknown>;
-      const { data } = await apiRequest(getConn(ctx), "GET", `/api/v1/users/${userId}`);
+      const { data } = await apiRequest(
+        getConn(ctx),
+        "GET",
+        `/api/v1/users/${userId}`,
+      );
       return data;
     },
   });
@@ -114,8 +162,16 @@ export default function okta(rl: RunlinePluginAPI) {
   rl.registerAction("user.list", {
     description: "List users (with optional search query)",
     inputSchema: {
-      search: { type: "string", required: false, description: "Search/filter query, e.g. profile.lastName sw \"Smi\"" },
-      limit: { type: "number", required: false, description: "Max results (default all)" },
+      search: {
+        type: "string",
+        required: false,
+        description: 'Search/filter query, e.g. profile.lastName sw "Smi"',
+      },
+      limit: {
+        type: "number",
+        required: false,
+        description: "Max results (default all)",
+      },
     },
     async execute(input, ctx) {
       const p = (input ?? {}) as Record<string, unknown>;
@@ -124,7 +180,13 @@ export default function okta(rl: RunlinePluginAPI) {
       if (p.search) qs.search = p.search;
       if (p.limit) {
         qs.limit = p.limit;
-        const { data } = await apiRequest(conn, "GET", "/api/v1/users/", undefined, qs);
+        const { data } = await apiRequest(
+          conn,
+          "GET",
+          "/api/v1/users/",
+          undefined,
+          qs,
+        );
         return data;
       }
       return paginate(conn, "/api/v1/users/", qs);
@@ -135,11 +197,21 @@ export default function okta(rl: RunlinePluginAPI) {
     description: "Update a user's profile",
     inputSchema: {
       userId: { type: "string", required: true, description: "User ID" },
-      profile: { type: "object", required: true, description: "Profile fields to update (firstName, lastName, email, login, city, department, etc.)" },
+      profile: {
+        type: "object",
+        required: true,
+        description:
+          "Profile fields to update (firstName, lastName, email, login, city, department, etc.)",
+      },
     },
     async execute(input, ctx) {
       const { userId, profile } = input as Record<string, unknown>;
-      const { data } = await apiRequest(getConn(ctx), "POST", `/api/v1/users/${userId}`, { profile });
+      const { data } = await apiRequest(
+        getConn(ctx),
+        "POST",
+        `/api/v1/users/${userId}`,
+        { profile },
+      );
       return data;
     },
   });

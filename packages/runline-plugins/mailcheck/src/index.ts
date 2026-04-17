@@ -5,13 +5,22 @@ export default function mailcheck(rl: RunlinePluginAPI) {
   rl.setVersion("0.1.0");
 
   rl.setConnectionSchema({
-    apiKey: { type: "string", required: true, description: "Mailcheck API key", env: "MAILCHECK_API_KEY" },
+    apiKey: {
+      type: "string",
+      required: true,
+      description: "Mailcheck API key",
+      env: "MAILCHECK_API_KEY",
+    },
   });
 
   rl.registerAction("email.check", {
     description: "Verify an email address",
     inputSchema: {
-      email: { type: "string", required: true, description: "Email address to check" },
+      email: {
+        type: "string",
+        required: true,
+        description: "Email address to check",
+      },
     },
     async execute(input, ctx) {
       const { email } = input as { email: string };
@@ -23,7 +32,10 @@ export default function mailcheck(rl: RunlinePluginAPI) {
         },
         body: JSON.stringify({ email }),
       });
-      if (!res.ok) throw new Error(`Mailcheck API error ${res.status}: ${await res.text()}`);
+      if (!res.ok)
+        throw new Error(
+          `Mailcheck API error ${res.status}: ${await res.text()}`,
+        );
       return res.json();
     },
   });

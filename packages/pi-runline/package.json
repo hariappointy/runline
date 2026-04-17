@@ -3,10 +3,17 @@
   "version": "0.2.1",
   "description": "Code mode for pi",
   "type": "commonjs",
-  "keywords": ["pi-package"],
-  "files": ["extensions", "README.md"],
+  "keywords": [
+    "pi-package"
+  ],
+  "files": [
+    "extensions",
+    "README.md"
+  ],
   "pi": {
-    "extensions": ["extensions/runline-context"]
+    "extensions": [
+      "extensions/runline-context"
+    ]
   },
   "scripts": {
     "build": "echo 'no build'",

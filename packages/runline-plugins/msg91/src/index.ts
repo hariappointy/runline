@@ -5,14 +5,23 @@ export default function msg91(rl: RunlinePluginAPI) {
   rl.setVersion("0.1.0");
 
   rl.setConnectionSchema({
-    authkey: { type: "string", required: true, description: "MSG91 auth key", env: "MSG91_AUTHKEY" },
+    authkey: {
+      type: "string",
+      required: true,
+      description: "MSG91 auth key",
+      env: "MSG91_AUTHKEY",
+    },
   });
 
   rl.registerAction("sms.send", {
     description: "Send a transactional SMS via MSG91",
     inputSchema: {
       from: { type: "string", required: true, description: "Sender ID" },
-      to: { type: "string", required: true, description: "Recipient number with country code" },
+      to: {
+        type: "string",
+        required: true,
+        description: "Recipient number with country code",
+      },
       message: { type: "string", required: true },
     },
     async execute(input, ctx) {
@@ -26,7 +35,8 @@ export default function msg91(rl: RunlinePluginAPI) {
       url.searchParams.set("mobiles", to as string);
       url.searchParams.set("message", message as string);
       const res = await fetch(url.toString());
-      if (!res.ok) throw new Error(`MSG91 API error ${res.status}: ${await res.text()}`);
+      if (!res.ok)
+        throw new Error(`MSG91 API error ${res.status}: ${await res.text()}`);
       const text = await res.text();
       return { requestId: text };
     },

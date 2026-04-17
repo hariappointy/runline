@@ -14,13 +14,7 @@ import { fileURLToPath } from "node:url";
 import { discoverPlugins } from "../dist/plugin/loader.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const ICONS_DIR = join(
-  __dirname,
-  "..",
-  "..",
-  "runline-plugins",
-  "icons",
-);
+const ICONS_DIR = join(__dirname, "..", "..", "runline-plugins", "icons");
 const ICONS_URL_BASE =
   "https://raw.githubusercontent.com/Michaelliv/runline/main/packages/runline-plugins/icons";
 

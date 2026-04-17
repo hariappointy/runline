@@ -7,8 +7,11 @@ function buildBaseUrl(cfg: Record<string, unknown>): string {
   const environment = cfg.environment as string | undefined;
 
   const rootUrl =
-    hosting === "selfHosted" && domain ? domain : `https://${appName}.bubbleapps.io`;
-  const urlSegment = environment === "development" ? "/version-test/api/1.1" : "/api/1.1";
+    hosting === "selfHosted" && domain
+      ? domain
+      : `https://${appName}.bubbleapps.io`;
+  const urlSegment =
+    environment === "development" ? "/version-test/api/1.1" : "/api/1.1";
   return `${rootUrl}${urlSegment}`;
 }
 
@@ -34,7 +37,12 @@ async function apiRequest(
       Authorization: `Bearer ${token}`,
     },
   };
-  if (body && Object.keys(body).length > 0 && method !== "GET" && method !== "DELETE") {
+  if (
+    body &&
+    Object.keys(body).length > 0 &&
+    method !== "GET" &&
+    method !== "DELETE"
+  ) {
     opts.body = JSON.stringify(body);
   }
 
@@ -103,26 +111,59 @@ export default function bubble(rl: RunlinePluginAPI) {
   rl.registerAction("object.create", {
     description: "Create an object",
     inputSchema: {
-      typeName: { type: "string", required: true, description: "Data type name" },
-      properties: { type: "object", required: true, description: "Key-value pairs of field values" },
+      typeName: {
+        type: "string",
+        required: true,
+        description: "Data type name",
+      },
+      properties: {
+        type: "object",
+        required: true,
+        description: "Key-value pairs of field values",
+      },
     },
     async execute(input, ctx) {
-      const { typeName, properties } = input as { typeName: string; properties: Record<string, unknown> };
+      const { typeName, properties } = input as {
+        typeName: string;
+        properties: Record<string, unknown>;
+      };
       const { baseUrl, token } = getConn(ctx);
-      return apiRequest(baseUrl, token, "POST", `/obj/${normalizeTypeName(typeName)}`, properties);
+      return apiRequest(
+        baseUrl,
+        token,
+        "POST",
+        `/obj/${normalizeTypeName(typeName)}`,
+        properties,
+      );
     },
   });
 
   rl.registerAction("object.get", {
     description: "Get an object by ID",
     inputSchema: {
-      typeName: { type: "string", required: true, description: "Data type name" },
-      objectId: { type: "string", required: true, description: "Object unique ID" },
+      typeName: {
+        type: "string",
+        required: true,
+        description: "Data type name",
+      },
+      objectId: {
+        type: "string",
+        required: true,
+        description: "Object unique ID",
+      },
     },
     async execute(input, ctx) {
-      const { typeName, objectId } = input as { typeName: string; objectId: string };
+      const { typeName, objectId } = input as {
+        typeName: string;
+        objectId: string;
+      };
       const { baseUrl, token } = getConn(ctx);
-      const data = (await apiRequest(baseUrl, token, "GET", `/obj/${normalizeTypeName(typeName)}/${objectId}`)) as Record<string, unknown>;
+      const data = (await apiRequest(
+        baseUrl,
+        token,
+        "GET",
+        `/obj/${normalizeTypeName(typeName)}/${objectId}`,
+      )) as Record<string, unknown>;
       return data.response;
     },
   });
@@ -130,14 +171,32 @@ export default function bubble(rl: RunlinePluginAPI) {
   rl.registerAction("object.list", {
     description: "List objects of a type with optional constraints and sorting",
     inputSchema: {
-      typeName: { type: "string", required: true, description: "Data type name" },
-      constraints: { type: "array", required: false, description: "Array of constraint objects [{key, constraint_type, value}]" },
-      sortField: { type: "string", required: false, description: "Field to sort by" },
-      descending: { type: "boolean", required: false, description: "Sort descending" },
+      typeName: {
+        type: "string",
+        required: true,
+        description: "Data type name",
+      },
+      constraints: {
+        type: "array",
+        required: false,
+        description:
+          "Array of constraint objects [{key, constraint_type, value}]",
+      },
+      sortField: {
+        type: "string",
+        required: false,
+        description: "Field to sort by",
+      },
+      descending: {
+        type: "boolean",
+        required: false,
+        description: "Sort descending",
+      },
       limit: { type: "number", required: false, description: "Max results" },
     },
     async execute(input, ctx) {
-      const { typeName, constraints, sortField, descending, limit } = (input ?? {}) as Record<string, unknown>;
+      const { typeName, constraints, sortField, descending, limit } = (input ??
+        {}) as Record<string, unknown>;
       const { baseUrl, token } = getConn(ctx);
       const qs: Record<string, unknown> = {};
       if (constraints) qs.constraints = JSON.stringify(constraints);
@@ -150,8 +209,18 @@ export default function bubble(rl: RunlinePluginAPI) {
 
       if (limit) {
         qs.limit = limit;
-        const data = (await apiRequest(baseUrl, token, "GET", endpoint, undefined, qs)) as Record<string, unknown>;
-        return ((data.response as Record<string, unknown>)?.results as unknown[]) ?? [];
+        const data = (await apiRequest(
+          baseUrl,
+          token,
+          "GET",
+          endpoint,
+          undefined,
+          qs,
+        )) as Record<string, unknown>;
+        return (
+          ((data.response as Record<string, unknown>)?.results as unknown[]) ??
+          []
+        );
       }
 
       // Paginate all
@@ -159,7 +228,14 @@ export default function bubble(rl: RunlinePluginAPI) {
       qs.limit = 100;
       qs.cursor = 0;
       while (true) {
-        const data = (await apiRequest(baseUrl, token, "GET", endpoint, undefined, qs)) as Record<string, unknown>;
+        const data = (await apiRequest(
+          baseUrl,
+          token,
+          "GET",
+          endpoint,
+          undefined,
+          qs,
+        )) as Record<string, unknown>;
         const resp = data.response as Record<string, unknown>;
         const items = (resp.results as unknown[]) ?? [];
         results.push(...items);
@@ -173,9 +249,21 @@ export default function bubble(rl: RunlinePluginAPI) {
   rl.registerAction("object.update", {
     description: "Update an object",
     inputSchema: {
-      typeName: { type: "string", required: true, description: "Data type name" },
-      objectId: { type: "string", required: true, description: "Object unique ID" },
-      properties: { type: "object", required: true, description: "Key-value pairs of fields to update" },
+      typeName: {
+        type: "string",
+        required: true,
+        description: "Data type name",
+      },
+      objectId: {
+        type: "string",
+        required: true,
+        description: "Object unique ID",
+      },
+      properties: {
+        type: "object",
+        required: true,
+        description: "Key-value pairs of fields to update",
+      },
     },
     async execute(input, ctx) {
       const { typeName, objectId, properties } = input as {
@@ -184,7 +272,13 @@ export default function bubble(rl: RunlinePluginAPI) {
         properties: Record<string, unknown>;
       };
       const { baseUrl, token } = getConn(ctx);
-      await apiRequest(baseUrl, token, "PATCH", `/obj/${normalizeTypeName(typeName)}/${objectId}`, properties);
+      await apiRequest(
+        baseUrl,
+        token,
+        "PATCH",
+        `/obj/${normalizeTypeName(typeName)}/${objectId}`,
+        properties,
+      );
       return { success: true };
     },
   });
@@ -192,13 +286,29 @@ export default function bubble(rl: RunlinePluginAPI) {
   rl.registerAction("object.delete", {
     description: "Delete an object",
     inputSchema: {
-      typeName: { type: "string", required: true, description: "Data type name" },
-      objectId: { type: "string", required: true, description: "Object unique ID" },
+      typeName: {
+        type: "string",
+        required: true,
+        description: "Data type name",
+      },
+      objectId: {
+        type: "string",
+        required: true,
+        description: "Object unique ID",
+      },
     },
     async execute(input, ctx) {
-      const { typeName, objectId } = input as { typeName: string; objectId: string };
+      const { typeName, objectId } = input as {
+        typeName: string;
+        objectId: string;
+      };
       const { baseUrl, token } = getConn(ctx);
-      await apiRequest(baseUrl, token, "DELETE", `/obj/${normalizeTypeName(typeName)}/${objectId}`);
+      await apiRequest(
+        baseUrl,
+        token,
+        "DELETE",
+        `/obj/${normalizeTypeName(typeName)}/${objectId}`,
+      );
       return { success: true };
     },
   });

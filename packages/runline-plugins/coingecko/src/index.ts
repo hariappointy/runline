@@ -16,7 +16,8 @@ async function apiRequest(
   const headers: Record<string, string> = { Accept: "application/json" };
   if (apiKey) headers["x-cg-demo-api-key"] = apiKey;
   const res = await fetch(url.toString(), { headers });
-  if (!res.ok) throw new Error(`CoinGecko API error ${res.status}: ${await res.text()}`);
+  if (!res.ok)
+    throw new Error(`CoinGecko API error ${res.status}: ${await res.text()}`);
   return res.json();
 }
 
@@ -33,7 +34,9 @@ export default function coingecko(rl: RunlinePluginAPI) {
     },
   });
 
-  function getKey(ctx: { connection: { config: Record<string, unknown> } }): string | undefined {
+  function getKey(ctx: {
+    connection: { config: Record<string, unknown> };
+  }): string | undefined {
     return ctx.connection.config.apiKey as string | undefined;
   }
 
@@ -42,17 +45,52 @@ export default function coingecko(rl: RunlinePluginAPI) {
   rl.registerAction("coin.get", {
     description: "Get detailed coin data by ID or contract address",
     inputSchema: {
-      coinId: { type: "string", required: false, description: "Coin ID (e.g. bitcoin)" },
-      platformId: { type: "string", required: false, description: "Platform ID for contract lookup" },
-      contractAddress: { type: "string", required: false, description: "Contract address" },
-      communityData: { type: "boolean", required: false, description: "Include community data" },
-      developerData: { type: "boolean", required: false, description: "Include developer data" },
-      marketData: { type: "boolean", required: false, description: "Include market data" },
-      tickers: { type: "boolean", required: false, description: "Include tickers" },
+      coinId: {
+        type: "string",
+        required: false,
+        description: "Coin ID (e.g. bitcoin)",
+      },
+      platformId: {
+        type: "string",
+        required: false,
+        description: "Platform ID for contract lookup",
+      },
+      contractAddress: {
+        type: "string",
+        required: false,
+        description: "Contract address",
+      },
+      communityData: {
+        type: "boolean",
+        required: false,
+        description: "Include community data",
+      },
+      developerData: {
+        type: "boolean",
+        required: false,
+        description: "Include developer data",
+      },
+      marketData: {
+        type: "boolean",
+        required: false,
+        description: "Include market data",
+      },
+      tickers: {
+        type: "boolean",
+        required: false,
+        description: "Include tickers",
+      },
     },
     async execute(input, ctx) {
-      const { coinId, platformId, contractAddress, communityData, developerData, marketData, tickers } =
-        (input ?? {}) as Record<string, unknown>;
+      const {
+        coinId,
+        platformId,
+        contractAddress,
+        communityData,
+        developerData,
+        marketData,
+        tickers,
+      } = (input ?? {}) as Record<string, unknown>;
       const qs: Record<string, unknown> = {
         community_data: communityData ?? false,
         developer_data: developerData ?? false,
@@ -62,7 +100,11 @@ export default function coingecko(rl: RunlinePluginAPI) {
         tickers: tickers ?? false,
       };
       if (contractAddress && platformId) {
-        return apiRequest(`/coins/${platformId}/contract/${contractAddress}`, qs, getKey(ctx));
+        return apiRequest(
+          `/coins/${platformId}/contract/${contractAddress}`,
+          qs,
+          getKey(ctx),
+        );
       }
       return apiRequest(`/coins/${coinId}`, qs, getKey(ctx));
     },
@@ -75,21 +117,46 @@ export default function coingecko(rl: RunlinePluginAPI) {
     },
     async execute(input, ctx) {
       const { limit } = (input ?? {}) as { limit?: number };
-      const data = (await apiRequest("/coins/list", undefined, getKey(ctx))) as unknown[];
+      const data = (await apiRequest(
+        "/coins/list",
+        undefined,
+        getKey(ctx),
+      )) as unknown[];
       if (limit) return data.slice(0, limit);
       return data;
     },
   });
 
   rl.registerAction("coin.market", {
-    description: "Get coin market data (price, mcap, volume) for multiple coins",
+    description:
+      "Get coin market data (price, mcap, volume) for multiple coins",
     inputSchema: {
-      vsCurrency: { type: "string", required: true, description: "Quote currency (e.g. usd)" },
-      ids: { type: "string", required: false, description: "Comma-separated coin IDs" },
-      category: { type: "string", required: false, description: "Category filter" },
+      vsCurrency: {
+        type: "string",
+        required: true,
+        description: "Quote currency (e.g. usd)",
+      },
+      ids: {
+        type: "string",
+        required: false,
+        description: "Comma-separated coin IDs",
+      },
+      category: {
+        type: "string",
+        required: false,
+        description: "Category filter",
+      },
       order: { type: "string", required: false, description: "Sort order" },
-      priceChangePercentage: { type: "string", required: false, description: "Comma-separated periods (1h,24h,7d,14d,30d,200d,1y)" },
-      limit: { type: "number", required: false, description: "Max results (default: 100)" },
+      priceChangePercentage: {
+        type: "string",
+        required: false,
+        description: "Comma-separated periods (1h,24h,7d,14d,30d,200d,1y)",
+      },
+      limit: {
+        type: "number",
+        required: false,
+        description: "Max results (default: 100)",
+      },
     },
     async execute(input, ctx) {
       const { vsCurrency, ids, category, order, priceChangePercentage, limit } =
@@ -98,7 +165,8 @@ export default function coingecko(rl: RunlinePluginAPI) {
       if (ids) qs.ids = ids;
       if (category) qs.category = category;
       if (order) qs.order = order;
-      if (priceChangePercentage) qs.price_change_percentage = priceChangePercentage;
+      if (priceChangePercentage)
+        qs.price_change_percentage = priceChangePercentage;
       if (limit) qs.per_page = limit;
       return apiRequest("/coins/markets", qs, getKey(ctx));
     },
@@ -107,15 +175,40 @@ export default function coingecko(rl: RunlinePluginAPI) {
   rl.registerAction("coin.price", {
     description: "Get simple price for coins",
     inputSchema: {
-      ids: { type: "string", required: true, description: "Comma-separated coin IDs" },
-      vsCurrencies: { type: "string", required: true, description: "Comma-separated quote currencies" },
-      includeMarketCap: { type: "boolean", required: false, description: "Include market cap" },
-      include24hrVol: { type: "boolean", required: false, description: "Include 24h volume" },
-      include24hrChange: { type: "boolean", required: false, description: "Include 24h change" },
+      ids: {
+        type: "string",
+        required: true,
+        description: "Comma-separated coin IDs",
+      },
+      vsCurrencies: {
+        type: "string",
+        required: true,
+        description: "Comma-separated quote currencies",
+      },
+      includeMarketCap: {
+        type: "boolean",
+        required: false,
+        description: "Include market cap",
+      },
+      include24hrVol: {
+        type: "boolean",
+        required: false,
+        description: "Include 24h volume",
+      },
+      include24hrChange: {
+        type: "boolean",
+        required: false,
+        description: "Include 24h change",
+      },
     },
     async execute(input, ctx) {
-      const { ids, vsCurrencies, includeMarketCap, include24hrVol, include24hrChange } =
-        (input ?? {}) as Record<string, unknown>;
+      const {
+        ids,
+        vsCurrencies,
+        includeMarketCap,
+        include24hrVol,
+        include24hrChange,
+      } = (input ?? {}) as Record<string, unknown>;
       const qs: Record<string, unknown> = {
         ids,
         vs_currencies: vsCurrencies,
@@ -130,16 +223,35 @@ export default function coingecko(rl: RunlinePluginAPI) {
   rl.registerAction("coin.tokenPrice", {
     description: "Get token price by contract address",
     inputSchema: {
-      platformId: { type: "string", required: true, description: "Platform ID (e.g. ethereum)" },
-      contractAddresses: { type: "string", required: true, description: "Comma-separated contract addresses" },
-      vsCurrencies: { type: "string", required: true, description: "Comma-separated quote currencies" },
+      platformId: {
+        type: "string",
+        required: true,
+        description: "Platform ID (e.g. ethereum)",
+      },
+      contractAddresses: {
+        type: "string",
+        required: true,
+        description: "Comma-separated contract addresses",
+      },
+      vsCurrencies: {
+        type: "string",
+        required: true,
+        description: "Comma-separated quote currencies",
+      },
     },
     async execute(input, ctx) {
-      const { platformId, contractAddresses, vsCurrencies } = input as Record<string, string>;
-      return apiRequest(`/simple/token_price/${platformId}`, {
-        contract_addresses: contractAddresses,
-        vs_currencies: vsCurrencies,
-      }, getKey(ctx));
+      const { platformId, contractAddresses, vsCurrencies } = input as Record<
+        string,
+        string
+      >;
+      return apiRequest(
+        `/simple/token_price/${platformId}`,
+        {
+          contract_addresses: contractAddresses,
+          vs_currencies: vsCurrencies,
+        },
+        getKey(ctx),
+      );
     },
   });
 
@@ -147,14 +259,25 @@ export default function coingecko(rl: RunlinePluginAPI) {
     description: "Get tickers for a coin",
     inputSchema: {
       coinId: { type: "string", required: true, description: "Coin ID" },
-      exchangeIds: { type: "string", required: false, description: "Comma-separated exchange IDs" },
+      exchangeIds: {
+        type: "string",
+        required: false,
+        description: "Comma-separated exchange IDs",
+      },
       limit: { type: "number", required: false, description: "Max results" },
     },
     async execute(input, ctx) {
-      const { coinId, exchangeIds, limit } = (input ?? {}) as Record<string, unknown>;
+      const { coinId, exchangeIds, limit } = (input ?? {}) as Record<
+        string,
+        unknown
+      >;
       const qs: Record<string, unknown> = {};
       if (exchangeIds) qs.exchange_ids = exchangeIds;
-      const data = (await apiRequest(`/coins/${coinId}/tickers`, qs, getKey(ctx))) as Record<string, unknown>;
+      const data = (await apiRequest(
+        `/coins/${coinId}/tickers`,
+        qs,
+        getKey(ctx),
+      )) as Record<string, unknown>;
       const tickers = (data.tickers as unknown[]) ?? [];
       if (limit) return tickers.slice(0, limit as number);
       return tickers;
@@ -165,8 +288,16 @@ export default function coingecko(rl: RunlinePluginAPI) {
     description: "Get historical data for a coin on a specific date",
     inputSchema: {
       coinId: { type: "string", required: true, description: "Coin ID" },
-      date: { type: "string", required: true, description: "Date (DD-MM-YYYY format)" },
-      localization: { type: "boolean", required: false, description: "Include localized languages" },
+      date: {
+        type: "string",
+        required: true,
+        description: "Date (DD-MM-YYYY format)",
+      },
+      localization: {
+        type: "boolean",
+        required: false,
+        description: "Include localized languages",
+      },
     },
     async execute(input, ctx) {
       const { coinId, date, localization } = input as Record<string, unknown>;
@@ -180,13 +311,30 @@ export default function coingecko(rl: RunlinePluginAPI) {
     description: "Get price, market cap, and volume chart data",
     inputSchema: {
       coinId: { type: "string", required: false, description: "Coin ID" },
-      platformId: { type: "string", required: false, description: "Platform ID (for contract)" },
-      contractAddress: { type: "string", required: false, description: "Contract address" },
-      vsCurrency: { type: "string", required: true, description: "Quote currency" },
-      days: { type: "string", required: true, description: "Number of days (1, 7, 14, 30, 90, 180, 365, max)" },
+      platformId: {
+        type: "string",
+        required: false,
+        description: "Platform ID (for contract)",
+      },
+      contractAddress: {
+        type: "string",
+        required: false,
+        description: "Contract address",
+      },
+      vsCurrency: {
+        type: "string",
+        required: true,
+        description: "Quote currency",
+      },
+      days: {
+        type: "string",
+        required: true,
+        description: "Number of days (1, 7, 14, 30, 90, 180, 365, max)",
+      },
     },
     async execute(input, ctx) {
-      const { coinId, platformId, contractAddress, vsCurrency, days } = input as Record<string, unknown>;
+      const { coinId, platformId, contractAddress, vsCurrency, days } =
+        input as Record<string, unknown>;
       const qs: Record<string, unknown> = { vs_currency: vsCurrency, days };
       let endpoint: string;
       if (contractAddress && platformId) {
@@ -194,7 +342,10 @@ export default function coingecko(rl: RunlinePluginAPI) {
       } else {
         endpoint = `/coins/${coinId}/market_chart`;
       }
-      const data = (await apiRequest(endpoint, qs, getKey(ctx))) as Record<string, unknown>;
+      const data = (await apiRequest(endpoint, qs, getKey(ctx))) as Record<
+        string,
+        unknown
+      >;
       const prices = (data.prices as number[][]) ?? [];
       return prices.map((p, idx) => ({
         time: new Date(p[0]).toISOString(),
@@ -209,15 +360,27 @@ export default function coingecko(rl: RunlinePluginAPI) {
     description: "Get OHLC candlestick data",
     inputSchema: {
       coinId: { type: "string", required: true, description: "Coin ID" },
-      vsCurrency: { type: "string", required: true, description: "Quote currency" },
-      days: { type: "string", required: true, description: "Number of days (1, 7, 14, 30, 90, 180, 365, max)" },
+      vsCurrency: {
+        type: "string",
+        required: true,
+        description: "Quote currency",
+      },
+      days: {
+        type: "string",
+        required: true,
+        description: "Number of days (1, 7, 14, 30, 90, 180, 365, max)",
+      },
     },
     async execute(input, ctx) {
       const { coinId, vsCurrency, days } = input as Record<string, string>;
-      const data = (await apiRequest(`/coins/${coinId}/ohlc`, {
-        vs_currency: vsCurrency,
-        days,
-      }, getKey(ctx))) as number[][];
+      const data = (await apiRequest(
+        `/coins/${coinId}/ohlc`,
+        {
+          vs_currency: vsCurrency,
+          days,
+        },
+        getKey(ctx),
+      )) as number[][];
       return data.map(([time, open, high, low, close]) => ({
         time: new Date(time).toISOString(),
         open,
@@ -233,17 +396,31 @@ export default function coingecko(rl: RunlinePluginAPI) {
   rl.registerAction("event.list", {
     description: "List crypto events",
     inputSchema: {
-      countryCode: { type: "string", required: false, description: "Country code filter" },
-      type: { type: "string", required: false, description: "Event type filter" },
+      countryCode: {
+        type: "string",
+        required: false,
+        description: "Country code filter",
+      },
+      type: {
+        type: "string",
+        required: false,
+        description: "Event type filter",
+      },
       limit: { type: "number", required: false, description: "Max results" },
     },
     async execute(input, ctx) {
-      const { countryCode, type, limit } = (input ?? {}) as Record<string, unknown>;
+      const { countryCode, type, limit } = (input ?? {}) as Record<
+        string,
+        unknown
+      >;
       const qs: Record<string, unknown> = {};
       if (countryCode) qs.country_code = countryCode;
       if (type) qs.type = type;
       if (limit) qs.per_page = limit;
-      const data = (await apiRequest("/events", qs, getKey(ctx))) as Record<string, unknown>;
+      const data = (await apiRequest("/events", qs, getKey(ctx))) as Record<
+        string,
+        unknown
+      >;
       return data.data;
     },
   });

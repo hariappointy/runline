@@ -49,7 +49,13 @@ async function paginateAll(
     const qs: Record<string, unknown> = { page_size: 500 };
     if (pageToken) qs.page_token = pageToken;
 
-    const data = (await apiRequest(apiKey, "GET", path, undefined, qs)) as Record<string, unknown>;
+    const data = (await apiRequest(
+      apiKey,
+      "GET",
+      path,
+      undefined,
+      qs,
+    )) as Record<string, unknown>;
     const items = (data[dataKey] as unknown[]) ?? [];
     results.push(...items);
 
@@ -62,7 +68,9 @@ async function paginateAll(
   return results;
 }
 
-function getKey(ctx: { connection: { config: Record<string, unknown> } }): string {
+function getKey(ctx: {
+  connection: { config: Record<string, unknown> };
+}): string {
   return ctx.connection.config.apiKey as string;
 }
 
@@ -95,11 +103,19 @@ export default function affinity(rl: RunlinePluginAPI) {
   rl.registerAction("list.list", {
     description: "List all lists",
     inputSchema: {
-      limit: { type: "number", required: false, description: "Max results to return" },
+      limit: {
+        type: "number",
+        required: false,
+        description: "Max results to return",
+      },
     },
     async execute(input, ctx) {
       const { limit } = (input as { limit?: number }) ?? {};
-      const data = (await apiRequest(getKey(ctx), "GET", "/lists")) as unknown[];
+      const data = (await apiRequest(
+        getKey(ctx),
+        "GET",
+        "/lists",
+      )) as unknown[];
       if (limit) return data.slice(0, limit);
       return data;
     },
@@ -111,7 +127,11 @@ export default function affinity(rl: RunlinePluginAPI) {
     description: "Create a new list entry",
     inputSchema: {
       listId: { type: "string", required: true, description: "List ID" },
-      entityId: { type: "number", required: true, description: "Entity ID to add" },
+      entityId: {
+        type: "number",
+        required: true,
+        description: "Entity ID to add",
+      },
     },
     async execute(input, ctx) {
       const { listId, entityId, ...rest } = input as Record<string, unknown>;
@@ -126,11 +146,22 @@ export default function affinity(rl: RunlinePluginAPI) {
     description: "Get a specific list entry",
     inputSchema: {
       listId: { type: "string", required: true, description: "List ID" },
-      listEntryId: { type: "string", required: true, description: "List Entry ID" },
+      listEntryId: {
+        type: "string",
+        required: true,
+        description: "List Entry ID",
+      },
     },
     async execute(input, ctx) {
-      const { listId, listEntryId } = input as { listId: string; listEntryId: string };
-      return apiRequest(getKey(ctx), "GET", `/lists/${listId}/list-entries/${listEntryId}`);
+      const { listId, listEntryId } = input as {
+        listId: string;
+        listEntryId: string;
+      };
+      return apiRequest(
+        getKey(ctx),
+        "GET",
+        `/lists/${listId}/list-entries/${listEntryId}`,
+      );
     },
   });
 
@@ -138,11 +169,20 @@ export default function affinity(rl: RunlinePluginAPI) {
     description: "List all entries in a list",
     inputSchema: {
       listId: { type: "string", required: true, description: "List ID" },
-      limit: { type: "number", required: false, description: "Max results to return" },
+      limit: {
+        type: "number",
+        required: false,
+        description: "Max results to return",
+      },
     },
     async execute(input, ctx) {
       const { listId, limit } = input as { listId: string; limit?: number };
-      return paginateAll(getKey(ctx), `/lists/${listId}/list-entries`, "list_entries", limit);
+      return paginateAll(
+        getKey(ctx),
+        `/lists/${listId}/list-entries`,
+        "list_entries",
+        limit,
+      );
     },
   });
 
@@ -150,11 +190,22 @@ export default function affinity(rl: RunlinePluginAPI) {
     description: "Delete a list entry",
     inputSchema: {
       listId: { type: "string", required: true, description: "List ID" },
-      listEntryId: { type: "string", required: true, description: "List Entry ID" },
+      listEntryId: {
+        type: "string",
+        required: true,
+        description: "List Entry ID",
+      },
     },
     async execute(input, ctx) {
-      const { listId, listEntryId } = input as { listId: string; listEntryId: string };
-      return apiRequest(getKey(ctx), "DELETE", `/lists/${listId}/list-entries/${listEntryId}`);
+      const { listId, listEntryId } = input as {
+        listId: string;
+        listEntryId: string;
+      };
+      return apiRequest(
+        getKey(ctx),
+        "DELETE",
+        `/lists/${listId}/list-entries/${listEntryId}`,
+      );
     },
   });
 
@@ -165,11 +216,22 @@ export default function affinity(rl: RunlinePluginAPI) {
     inputSchema: {
       firstName: { type: "string", required: true, description: "First name" },
       lastName: { type: "string", required: true, description: "Last name" },
-      emails: { type: "array", required: true, description: "Array of email addresses" },
-      organizationIds: { type: "array", required: false, description: "Array of organization IDs" },
+      emails: {
+        type: "array",
+        required: true,
+        description: "Array of email addresses",
+      },
+      organizationIds: {
+        type: "array",
+        required: false,
+        description: "Array of organization IDs",
+      },
     },
     async execute(input, ctx) {
-      const { firstName, lastName, emails, organizationIds } = input as Record<string, unknown>;
+      const { firstName, lastName, emails, organizationIds } = input as Record<
+        string,
+        unknown
+      >;
       const body: Record<string, unknown> = {
         first_name: firstName,
         last_name: lastName,
@@ -195,10 +257,15 @@ export default function affinity(rl: RunlinePluginAPI) {
     description: "Search/list persons",
     inputSchema: {
       term: { type: "string", required: false, description: "Search term" },
-      limit: { type: "number", required: false, description: "Max results to return" },
+      limit: {
+        type: "number",
+        required: false,
+        description: "Max results to return",
+      },
     },
     async execute(input, ctx) {
-      const { term, limit } = (input as { term?: string; limit?: number }) ?? {};
+      const { term, limit } =
+        (input as { term?: string; limit?: number }) ?? {};
       const qs: Record<string, unknown> = {};
       if (term) qs.term = term;
       return paginateAll(getKey(ctx), "/persons", "persons", limit);
@@ -209,16 +276,22 @@ export default function affinity(rl: RunlinePluginAPI) {
     description: "Update a person",
     inputSchema: {
       personId: { type: "string", required: true, description: "Person ID" },
-      emails: { type: "array", required: true, description: "Array of email addresses" },
+      emails: {
+        type: "array",
+        required: true,
+        description: "Array of email addresses",
+      },
       firstName: { type: "string", required: false, description: "First name" },
       lastName: { type: "string", required: false, description: "Last name" },
-      organizationIds: { type: "array", required: false, description: "Array of organization IDs" },
+      organizationIds: {
+        type: "array",
+        required: false,
+        description: "Array of organization IDs",
+      },
     },
     async execute(input, ctx) {
-      const { personId, firstName, lastName, emails, organizationIds } = input as Record<
-        string,
-        unknown
-      >;
+      const { personId, firstName, lastName, emails, organizationIds } =
+        input as Record<string, unknown>;
       const body: Record<string, unknown> = { emails };
       if (firstName) body.first_name = firstName;
       if (lastName) body.last_name = lastName;
@@ -243,9 +316,21 @@ export default function affinity(rl: RunlinePluginAPI) {
   rl.registerAction("organization.create", {
     description: "Create a new organization",
     inputSchema: {
-      name: { type: "string", required: true, description: "Organization name" },
-      domain: { type: "string", required: true, description: "Organization domain" },
-      personIds: { type: "array", required: false, description: "Array of person IDs" },
+      name: {
+        type: "string",
+        required: true,
+        description: "Organization name",
+      },
+      domain: {
+        type: "string",
+        required: true,
+        description: "Organization domain",
+      },
+      personIds: {
+        type: "array",
+        required: false,
+        description: "Array of person IDs",
+      },
     },
     async execute(input, ctx) {
       const { name, domain, personIds } = input as Record<string, unknown>;
@@ -258,7 +343,11 @@ export default function affinity(rl: RunlinePluginAPI) {
   rl.registerAction("organization.get", {
     description: "Get a specific organization",
     inputSchema: {
-      organizationId: { type: "string", required: true, description: "Organization ID" },
+      organizationId: {
+        type: "string",
+        required: true,
+        description: "Organization ID",
+      },
     },
     async execute(input, ctx) {
       const { organizationId } = input as { organizationId: string };
@@ -270,10 +359,15 @@ export default function affinity(rl: RunlinePluginAPI) {
     description: "Search/list organizations",
     inputSchema: {
       term: { type: "string", required: false, description: "Search term" },
-      limit: { type: "number", required: false, description: "Max results to return" },
+      limit: {
+        type: "number",
+        required: false,
+        description: "Max results to return",
+      },
     },
     async execute(input, ctx) {
-      const { term, limit } = (input as { term?: string; limit?: number }) ?? {};
+      const { term, limit } =
+        (input as { term?: string; limit?: number }) ?? {};
       const qs: Record<string, unknown> = {};
       if (term) qs.term = term;
       return paginateAll(getKey(ctx), "/organizations", "organizations", limit);
@@ -283,29 +377,61 @@ export default function affinity(rl: RunlinePluginAPI) {
   rl.registerAction("organization.update", {
     description: "Update an organization",
     inputSchema: {
-      organizationId: { type: "string", required: true, description: "Organization ID" },
-      name: { type: "string", required: false, description: "Organization name" },
-      domain: { type: "string", required: false, description: "Organization domain" },
-      personIds: { type: "array", required: false, description: "Array of person IDs" },
+      organizationId: {
+        type: "string",
+        required: true,
+        description: "Organization ID",
+      },
+      name: {
+        type: "string",
+        required: false,
+        description: "Organization name",
+      },
+      domain: {
+        type: "string",
+        required: false,
+        description: "Organization domain",
+      },
+      personIds: {
+        type: "array",
+        required: false,
+        description: "Array of person IDs",
+      },
     },
     async execute(input, ctx) {
-      const { organizationId, name, domain, personIds } = input as Record<string, unknown>;
+      const { organizationId, name, domain, personIds } = input as Record<
+        string,
+        unknown
+      >;
       const body: Record<string, unknown> = {};
       if (name) body.name = name;
       if (domain) body.domain = domain;
       if (personIds) body.person_ids = personIds;
-      return apiRequest(getKey(ctx), "PUT", `/organizations/${organizationId}`, body);
+      return apiRequest(
+        getKey(ctx),
+        "PUT",
+        `/organizations/${organizationId}`,
+        body,
+      );
     },
   });
 
   rl.registerAction("organization.delete", {
     description: "Delete an organization",
     inputSchema: {
-      organizationId: { type: "string", required: true, description: "Organization ID" },
+      organizationId: {
+        type: "string",
+        required: true,
+        description: "Organization ID",
+      },
     },
     async execute(input, ctx) {
       const { organizationId } = input as { organizationId: string };
-      return apiRequest(getKey(ctx), "DELETE", `/organizations/${organizationId}`);
+      return apiRequest(
+        getKey(ctx),
+        "DELETE",
+        `/organizations/${organizationId}`,
+      );
     },
   });
 }

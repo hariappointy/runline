@@ -23,7 +23,12 @@ async function apiRequest(
       Authorization: `Bearer ${token}`,
     },
   };
-  if (body && Object.keys(body).length > 0 && method !== "GET" && method !== "DELETE") {
+  if (
+    body &&
+    Object.keys(body).length > 0 &&
+    method !== "GET" &&
+    method !== "DELETE"
+  ) {
     opts.body = JSON.stringify(body);
   }
 
@@ -64,7 +69,9 @@ async function paginateAll(
   return results;
 }
 
-function getToken(ctx: { connection: { config: Record<string, unknown> } }): string {
+function getToken(ctx: {
+  connection: { config: Record<string, unknown> };
+}): string {
   return ctx.connection.config.accessToken as string;
 }
 
@@ -87,19 +94,44 @@ export default function box(rl: RunlinePluginAPI) {
     description: "Copy a file to a folder",
     inputSchema: {
       fileId: { type: "string", required: true, description: "File ID" },
-      parentId: { type: "string", required: true, description: "Destination folder ID (0 for root)" },
-      name: { type: "string", required: false, description: "New name for the copy" },
-      version: { type: "string", required: false, description: "Specific version to copy" },
-      fields: { type: "string", required: false, description: "Comma-separated fields to return" },
+      parentId: {
+        type: "string",
+        required: true,
+        description: "Destination folder ID (0 for root)",
+      },
+      name: {
+        type: "string",
+        required: false,
+        description: "New name for the copy",
+      },
+      version: {
+        type: "string",
+        required: false,
+        description: "Specific version to copy",
+      },
+      fields: {
+        type: "string",
+        required: false,
+        description: "Comma-separated fields to return",
+      },
     },
     async execute(input, ctx) {
-      const { fileId, parentId, name, version, fields } = input as Record<string, unknown>;
+      const { fileId, parentId, name, version, fields } = input as Record<
+        string,
+        unknown
+      >;
       const body: Record<string, unknown> = { parent: { id: parentId || "0" } };
       if (name) body.name = name;
       if (version) body.version = version;
       const qs: Record<string, unknown> = {};
       if (fields) qs.fields = fields;
-      return apiRequest(getToken(ctx), "POST", `/files/${fileId}/copy`, body, qs);
+      return apiRequest(
+        getToken(ctx),
+        "POST",
+        `/files/${fileId}/copy`,
+        body,
+        qs,
+      );
     },
   });
 
@@ -119,13 +151,23 @@ export default function box(rl: RunlinePluginAPI) {
     description: "Get file metadata",
     inputSchema: {
       fileId: { type: "string", required: true, description: "File ID" },
-      fields: { type: "string", required: false, description: "Comma-separated fields to return" },
+      fields: {
+        type: "string",
+        required: false,
+        description: "Comma-separated fields to return",
+      },
     },
     async execute(input, ctx) {
       const { fileId, fields } = input as { fileId: string; fields?: string };
       const qs: Record<string, unknown> = {};
       if (fields) qs.fields = fields;
-      return apiRequest(getToken(ctx), "GET", `/files/${fileId}`, undefined, qs);
+      return apiRequest(
+        getToken(ctx),
+        "GET",
+        `/files/${fileId}`,
+        undefined,
+        qs,
+      );
     },
   });
 
@@ -134,20 +176,49 @@ export default function box(rl: RunlinePluginAPI) {
     inputSchema: {
       query: { type: "string", required: true, description: "Search query" },
       limit: { type: "number", required: false, description: "Max results" },
-      contentTypes: { type: "string", required: false, description: "Comma-separated content types (name, description, file_content, comments, tags)" },
-      createdAtRange: { type: "string", required: false, description: "Date range: from,to (ISO 8601)" },
-      updatedAtRange: { type: "string", required: false, description: "Date range: from,to (ISO 8601)" },
-      ancestorFolderIds: { type: "string", required: false, description: "Comma-separated folder IDs to search within" },
+      contentTypes: {
+        type: "string",
+        required: false,
+        description:
+          "Comma-separated content types (name, description, file_content, comments, tags)",
+      },
+      createdAtRange: {
+        type: "string",
+        required: false,
+        description: "Date range: from,to (ISO 8601)",
+      },
+      updatedAtRange: {
+        type: "string",
+        required: false,
+        description: "Date range: from,to (ISO 8601)",
+      },
+      ancestorFolderIds: {
+        type: "string",
+        required: false,
+        description: "Comma-separated folder IDs to search within",
+      },
     },
     async execute(input, ctx) {
-      const { query, limit, contentTypes, createdAtRange, updatedAtRange, ancestorFolderIds } =
-        (input ?? {}) as Record<string, unknown>;
+      const {
+        query,
+        limit,
+        contentTypes,
+        createdAtRange,
+        updatedAtRange,
+        ancestorFolderIds,
+      } = (input ?? {}) as Record<string, unknown>;
       const qs: Record<string, unknown> = { type: "file", query };
       if (contentTypes) qs.content_types = contentTypes;
       if (createdAtRange) qs.created_at_range = createdAtRange;
       if (updatedAtRange) qs.updated_at_range = updatedAtRange;
       if (ancestorFolderIds) qs.ancestor_folder_ids = ancestorFolderIds;
-      return paginateAll(getToken(ctx), "/search", "entries", qs, limit as number | undefined);
+      return paginateAll(
+        getToken(ctx),
+        "/search",
+        "entries",
+        qs,
+        limit as number | undefined,
+      );
     },
   });
 
@@ -155,17 +226,54 @@ export default function box(rl: RunlinePluginAPI) {
     description: "Share a file (create a collaboration)",
     inputSchema: {
       fileId: { type: "string", required: true, description: "File ID" },
-      role: { type: "string", required: true, description: "Role: editor, viewer, previewer, uploader, previewer_uploader, viewer_uploader, co-owner" },
-      accessibleByType: { type: "string", required: true, description: "'user' or 'group'" },
-      accessibleById: { type: "string", required: false, description: "User/group ID (use this or email)" },
-      email: { type: "string", required: false, description: "User email (alternative to ID, only for user type)" },
-      canViewPath: { type: "boolean", required: false, description: "Can view path to this item" },
-      expiresAt: { type: "string", required: false, description: "Expiration date (ISO 8601)" },
-      notify: { type: "boolean", required: false, description: "Send notification email" },
+      role: {
+        type: "string",
+        required: true,
+        description:
+          "Role: editor, viewer, previewer, uploader, previewer_uploader, viewer_uploader, co-owner",
+      },
+      accessibleByType: {
+        type: "string",
+        required: true,
+        description: "'user' or 'group'",
+      },
+      accessibleById: {
+        type: "string",
+        required: false,
+        description: "User/group ID (use this or email)",
+      },
+      email: {
+        type: "string",
+        required: false,
+        description: "User email (alternative to ID, only for user type)",
+      },
+      canViewPath: {
+        type: "boolean",
+        required: false,
+        description: "Can view path to this item",
+      },
+      expiresAt: {
+        type: "string",
+        required: false,
+        description: "Expiration date (ISO 8601)",
+      },
+      notify: {
+        type: "boolean",
+        required: false,
+        description: "Send notification email",
+      },
     },
     async execute(input, ctx) {
-      const { fileId, role, accessibleByType, accessibleById, email, canViewPath, expiresAt, notify } =
-        input as Record<string, unknown>;
+      const {
+        fileId,
+        role,
+        accessibleByType,
+        accessibleById,
+        email,
+        canViewPath,
+        expiresAt,
+        notify,
+      } = input as Record<string, unknown>;
       const body: Record<string, unknown> = {
         item: { id: fileId, type: "file" },
         role,
@@ -189,8 +297,16 @@ export default function box(rl: RunlinePluginAPI) {
     description: "Create a folder",
     inputSchema: {
       name: { type: "string", required: true, description: "Folder name" },
-      parentId: { type: "string", required: false, description: "Parent folder ID (0 for root)" },
-      fields: { type: "string", required: false, description: "Comma-separated fields to return" },
+      parentId: {
+        type: "string",
+        required: false,
+        description: "Parent folder ID (0 for root)",
+      },
+      fields: {
+        type: "string",
+        required: false,
+        description: "Comma-separated fields to return",
+      },
     },
     async execute(input, ctx) {
       const { name, parentId, fields } = input as Record<string, unknown>;
@@ -208,13 +324,26 @@ export default function box(rl: RunlinePluginAPI) {
     description: "Delete a folder",
     inputSchema: {
       folderId: { type: "string", required: true, description: "Folder ID" },
-      recursive: { type: "boolean", required: false, description: "Delete non-empty folder recursively" },
+      recursive: {
+        type: "boolean",
+        required: false,
+        description: "Delete non-empty folder recursively",
+      },
     },
     async execute(input, ctx) {
-      const { folderId, recursive } = input as { folderId: string; recursive?: boolean };
-      await apiRequest(getToken(ctx), "DELETE", `/folders/${folderId}`, undefined, {
-        recursive: recursive ?? false,
-      });
+      const { folderId, recursive } = input as {
+        folderId: string;
+        recursive?: boolean;
+      };
+      await apiRequest(
+        getToken(ctx),
+        "DELETE",
+        `/folders/${folderId}`,
+        undefined,
+        {
+          recursive: recursive ?? false,
+        },
+      );
       return { success: true };
     },
   });
@@ -235,9 +364,21 @@ export default function box(rl: RunlinePluginAPI) {
     inputSchema: {
       query: { type: "string", required: true, description: "Search query" },
       limit: { type: "number", required: false, description: "Max results" },
-      contentTypes: { type: "string", required: false, description: "Comma-separated content types" },
-      createdAtRange: { type: "string", required: false, description: "Date range: from,to (ISO 8601)" },
-      updatedAtRange: { type: "string", required: false, description: "Date range: from,to (ISO 8601)" },
+      contentTypes: {
+        type: "string",
+        required: false,
+        description: "Comma-separated content types",
+      },
+      createdAtRange: {
+        type: "string",
+        required: false,
+        description: "Date range: from,to (ISO 8601)",
+      },
+      updatedAtRange: {
+        type: "string",
+        required: false,
+        description: "Date range: from,to (ISO 8601)",
+      },
     },
     async execute(input, ctx) {
       const { query, limit, contentTypes, createdAtRange, updatedAtRange } =
@@ -246,7 +387,13 @@ export default function box(rl: RunlinePluginAPI) {
       if (contentTypes) qs.content_types = contentTypes;
       if (createdAtRange) qs.created_at_range = createdAtRange;
       if (updatedAtRange) qs.updated_at_range = updatedAtRange;
-      return paginateAll(getToken(ctx), "/search", "entries", qs, limit as number | undefined);
+      return paginateAll(
+        getToken(ctx),
+        "/search",
+        "entries",
+        qs,
+        limit as number | undefined,
+      );
     },
   });
 
@@ -254,17 +401,54 @@ export default function box(rl: RunlinePluginAPI) {
     description: "Share a folder (create a collaboration)",
     inputSchema: {
       folderId: { type: "string", required: true, description: "Folder ID" },
-      role: { type: "string", required: true, description: "Role: editor, viewer, previewer, uploader, previewer_uploader, viewer_uploader, co-owner" },
-      accessibleByType: { type: "string", required: true, description: "'user' or 'group'" },
-      accessibleById: { type: "string", required: false, description: "User/group ID" },
-      email: { type: "string", required: false, description: "User email (alternative to ID)" },
-      canViewPath: { type: "boolean", required: false, description: "Can view path" },
-      expiresAt: { type: "string", required: false, description: "Expiration (ISO 8601)" },
-      notify: { type: "boolean", required: false, description: "Send notification" },
+      role: {
+        type: "string",
+        required: true,
+        description:
+          "Role: editor, viewer, previewer, uploader, previewer_uploader, viewer_uploader, co-owner",
+      },
+      accessibleByType: {
+        type: "string",
+        required: true,
+        description: "'user' or 'group'",
+      },
+      accessibleById: {
+        type: "string",
+        required: false,
+        description: "User/group ID",
+      },
+      email: {
+        type: "string",
+        required: false,
+        description: "User email (alternative to ID)",
+      },
+      canViewPath: {
+        type: "boolean",
+        required: false,
+        description: "Can view path",
+      },
+      expiresAt: {
+        type: "string",
+        required: false,
+        description: "Expiration (ISO 8601)",
+      },
+      notify: {
+        type: "boolean",
+        required: false,
+        description: "Send notification",
+      },
     },
     async execute(input, ctx) {
-      const { folderId, role, accessibleByType, accessibleById, email, canViewPath, expiresAt, notify } =
-        input as Record<string, unknown>;
+      const {
+        folderId,
+        role,
+        accessibleByType,
+        accessibleById,
+        email,
+        canViewPath,
+        expiresAt,
+        notify,
+      } = input as Record<string, unknown>;
       const body: Record<string, unknown> = {
         item: { id: folderId, type: "folder" },
         role,
@@ -287,13 +471,30 @@ export default function box(rl: RunlinePluginAPI) {
     inputSchema: {
       folderId: { type: "string", required: true, description: "Folder ID" },
       name: { type: "string", required: false, description: "New name" },
-      parentId: { type: "string", required: false, description: "Move to this parent folder ID" },
-      description: { type: "string", required: false, description: "Description" },
-      tags: { type: "string", required: false, description: "Comma-separated tags" },
-      fields: { type: "string", required: false, description: "Fields to return" },
+      parentId: {
+        type: "string",
+        required: false,
+        description: "Move to this parent folder ID",
+      },
+      description: {
+        type: "string",
+        required: false,
+        description: "Description",
+      },
+      tags: {
+        type: "string",
+        required: false,
+        description: "Comma-separated tags",
+      },
+      fields: {
+        type: "string",
+        required: false,
+        description: "Fields to return",
+      },
     },
     async execute(input, ctx) {
-      const { folderId, name, parentId, description, tags, fields } = input as Record<string, unknown>;
+      const { folderId, name, parentId, description, tags, fields } =
+        input as Record<string, unknown>;
       const body: Record<string, unknown> = {};
       if (name) body.name = name;
       if (parentId) body.parent = { id: parentId };

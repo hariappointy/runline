@@ -28,7 +28,12 @@ async function apiRequest(
       Authorization: `Bearer ${token}`,
     },
   };
-  if (body && Object.keys(body).length > 0 && method !== "GET" && method !== "DELETE") {
+  if (
+    body &&
+    Object.keys(body).length > 0 &&
+    method !== "GET" &&
+    method !== "DELETE"
+  ) {
     opts.body = JSON.stringify(body);
   }
 
@@ -91,7 +96,9 @@ async function batchWrite(
   return results;
 }
 
-function getToken(ctx: { connection: { config: Record<string, unknown> } }): string {
+function getToken(ctx: {
+  connection: { config: Record<string, unknown> };
+}): string {
   return ctx.connection.config.token as string;
 }
 
@@ -113,7 +120,11 @@ export default function airtable(rl: RunlinePluginAPI) {
   rl.registerAction("base.list", {
     description: "List all accessible bases",
     inputSchema: {
-      limit: { type: "number", required: false, description: "Max results to return" },
+      limit: {
+        type: "number",
+        required: false,
+        description: "Max results to return",
+      },
     },
     async execute(input, ctx) {
       const { limit } = (input as { limit?: number }) ?? {};
@@ -124,7 +135,13 @@ export default function airtable(rl: RunlinePluginAPI) {
       while (true) {
         const qs: Record<string, unknown> = {};
         if (offset) qs.offset = offset;
-        const data = (await apiRequest(token, "GET", "meta/bases", undefined, qs)) as {
+        const data = (await apiRequest(
+          token,
+          "GET",
+          "meta/bases",
+          undefined,
+          qs,
+        )) as {
           bases: unknown[];
           offset?: string;
         };
@@ -141,7 +158,11 @@ export default function airtable(rl: RunlinePluginAPI) {
   rl.registerAction("base.getSchema", {
     description: "Get the schema (tables and fields) of a base",
     inputSchema: {
-      baseId: { type: "string", required: true, description: "Base ID (e.g. appXXXXXXXXXXXXXX)" },
+      baseId: {
+        type: "string",
+        required: true,
+        description: "Base ID (e.g. appXXXXXXXXXXXXXX)",
+      },
     },
     async execute(input, ctx) {
       const { baseId } = input as { baseId: string };
@@ -155,8 +176,16 @@ export default function airtable(rl: RunlinePluginAPI) {
     description: "Create a record in a table",
     inputSchema: {
       baseId: { type: "string", required: true, description: "Base ID" },
-      tableId: { type: "string", required: true, description: "Table ID or name" },
-      fields: { type: "object", required: true, description: "Field values as key-value pairs" },
+      tableId: {
+        type: "string",
+        required: true,
+        description: "Table ID or name",
+      },
+      fields: {
+        type: "object",
+        required: true,
+        description: "Field values as key-value pairs",
+      },
       typecast: {
         type: "boolean",
         required: false,
@@ -180,13 +209,21 @@ export default function airtable(rl: RunlinePluginAPI) {
     description: "Create multiple records in a table (batched in groups of 10)",
     inputSchema: {
       baseId: { type: "string", required: true, description: "Base ID" },
-      tableId: { type: "string", required: true, description: "Table ID or name" },
+      tableId: {
+        type: "string",
+        required: true,
+        description: "Table ID or name",
+      },
       records: {
         type: "array",
         required: true,
         description: "Array of { fields: { ... } } objects",
       },
-      typecast: { type: "boolean", required: false, description: "Auto-typecast values" },
+      typecast: {
+        type: "boolean",
+        required: false,
+        description: "Auto-typecast values",
+      },
     },
     async execute(input, ctx) {
       const { baseId, tableId, records, typecast } = input as {
@@ -197,7 +234,13 @@ export default function airtable(rl: RunlinePluginAPI) {
       };
       const extra: Record<string, unknown> = {};
       if (typecast) extra.typecast = true;
-      return batchWrite(getToken(ctx), "POST", `${baseId}/${tableId}`, records, extra);
+      return batchWrite(
+        getToken(ctx),
+        "POST",
+        `${baseId}/${tableId}`,
+        records,
+        extra,
+      );
     },
   });
 
@@ -205,8 +248,16 @@ export default function airtable(rl: RunlinePluginAPI) {
     description: "Get a single record by ID",
     inputSchema: {
       baseId: { type: "string", required: true, description: "Base ID" },
-      tableId: { type: "string", required: true, description: "Table ID or name" },
-      recordId: { type: "string", required: true, description: "Record ID (e.g. recXXX)" },
+      tableId: {
+        type: "string",
+        required: true,
+        description: "Table ID or name",
+      },
+      recordId: {
+        type: "string",
+        required: true,
+        description: "Record ID (e.g. recXXX)",
+      },
     },
     async execute(input, ctx) {
       const { baseId, tableId, recordId } = input as {
@@ -214,7 +265,11 @@ export default function airtable(rl: RunlinePluginAPI) {
         tableId: string;
         recordId: string;
       };
-      return apiRequest(getToken(ctx), "GET", `${baseId}/${tableId}/${recordId}`);
+      return apiRequest(
+        getToken(ctx),
+        "GET",
+        `${baseId}/${tableId}/${recordId}`,
+      );
     },
   });
 
@@ -222,7 +277,11 @@ export default function airtable(rl: RunlinePluginAPI) {
     description: "Search/list records with optional formula filter and sorting",
     inputSchema: {
       baseId: { type: "string", required: true, description: "Base ID" },
-      tableId: { type: "string", required: true, description: "Table ID or name" },
+      tableId: {
+        type: "string",
+        required: true,
+        description: "Table ID or name",
+      },
       filterByFormula: {
         type: "string",
         required: false,
@@ -236,21 +295,27 @@ export default function airtable(rl: RunlinePluginAPI) {
       sort: {
         type: "array",
         required: false,
-        description: "Array of { field, direction } objects (direction: 'asc' or 'desc')",
+        description:
+          "Array of { field, direction } objects (direction: 'asc' or 'desc')",
       },
       view: { type: "string", required: false, description: "View ID or name" },
-      limit: { type: "number", required: false, description: "Max records to return" },
+      limit: {
+        type: "number",
+        required: false,
+        description: "Max records to return",
+      },
     },
     async execute(input, ctx) {
-      const { baseId, tableId, filterByFormula, fields, sort, view, limit } = input as {
-        baseId: string;
-        tableId: string;
-        filterByFormula?: string;
-        fields?: string[];
-        sort?: Array<{ field: string; direction: string }>;
-        view?: string;
-        limit?: number;
-      };
+      const { baseId, tableId, filterByFormula, fields, sort, view, limit } =
+        input as {
+          baseId: string;
+          tableId: string;
+          filterByFormula?: string;
+          fields?: string[];
+          sort?: Array<{ field: string; direction: string }>;
+          view?: string;
+          limit?: number;
+        };
       const qs: Record<string, unknown> = {};
       if (filterByFormula) qs.filterByFormula = filterByFormula;
       if (fields) qs.fields = fields;
@@ -263,13 +328,26 @@ export default function airtable(rl: RunlinePluginAPI) {
   });
 
   rl.registerAction("record.update", {
-    description: "Update a record by ID (PATCH — only updates specified fields)",
+    description:
+      "Update a record by ID (PATCH — only updates specified fields)",
     inputSchema: {
       baseId: { type: "string", required: true, description: "Base ID" },
-      tableId: { type: "string", required: true, description: "Table ID or name" },
+      tableId: {
+        type: "string",
+        required: true,
+        description: "Table ID or name",
+      },
       recordId: { type: "string", required: true, description: "Record ID" },
-      fields: { type: "object", required: true, description: "Fields to update" },
-      typecast: { type: "boolean", required: false, description: "Auto-typecast values" },
+      fields: {
+        type: "object",
+        required: true,
+        description: "Fields to update",
+      },
+      typecast: {
+        type: "boolean",
+        required: false,
+        description: "Auto-typecast values",
+      },
     },
     async execute(input, ctx) {
       const { baseId, tableId, recordId, fields, typecast } = input as {
@@ -281,7 +359,12 @@ export default function airtable(rl: RunlinePluginAPI) {
       };
       const body: Record<string, unknown> = { fields };
       if (typecast) body.typecast = true;
-      return apiRequest(getToken(ctx), "PATCH", `${baseId}/${tableId}/${recordId}`, body);
+      return apiRequest(
+        getToken(ctx),
+        "PATCH",
+        `${baseId}/${tableId}/${recordId}`,
+        body,
+      );
     },
   });
 
@@ -289,13 +372,21 @@ export default function airtable(rl: RunlinePluginAPI) {
     description: "Update multiple records (batched in groups of 10)",
     inputSchema: {
       baseId: { type: "string", required: true, description: "Base ID" },
-      tableId: { type: "string", required: true, description: "Table ID or name" },
+      tableId: {
+        type: "string",
+        required: true,
+        description: "Table ID or name",
+      },
       records: {
         type: "array",
         required: true,
         description: "Array of { id, fields: { ... } } objects",
       },
-      typecast: { type: "boolean", required: false, description: "Auto-typecast values" },
+      typecast: {
+        type: "boolean",
+        required: false,
+        description: "Auto-typecast values",
+      },
     },
     async execute(input, ctx) {
       const { baseId, tableId, records, typecast } = input as {
@@ -306,7 +397,13 @@ export default function airtable(rl: RunlinePluginAPI) {
       };
       const extra: Record<string, unknown> = {};
       if (typecast) extra.typecast = true;
-      return batchWrite(getToken(ctx), "PATCH", `${baseId}/${tableId}`, records, extra);
+      return batchWrite(
+        getToken(ctx),
+        "PATCH",
+        `${baseId}/${tableId}`,
+        records,
+        extra,
+      );
     },
   });
 
@@ -315,14 +412,22 @@ export default function airtable(rl: RunlinePluginAPI) {
       "Create or update a record based on matching fields (uses Airtable's performUpsert)",
     inputSchema: {
       baseId: { type: "string", required: true, description: "Base ID" },
-      tableId: { type: "string", required: true, description: "Table ID or name" },
+      tableId: {
+        type: "string",
+        required: true,
+        description: "Table ID or name",
+      },
       fields: { type: "object", required: true, description: "Field values" },
       fieldsToMergeOn: {
         type: "array",
         required: true,
         description: "Field names to match on for upsert",
       },
-      typecast: { type: "boolean", required: false, description: "Auto-typecast values" },
+      typecast: {
+        type: "boolean",
+        required: false,
+        description: "Auto-typecast values",
+      },
     },
     async execute(input, ctx) {
       const { baseId, tableId, fields, fieldsToMergeOn, typecast } = input as {
@@ -345,7 +450,11 @@ export default function airtable(rl: RunlinePluginAPI) {
     description: "Delete a record by ID",
     inputSchema: {
       baseId: { type: "string", required: true, description: "Base ID" },
-      tableId: { type: "string", required: true, description: "Table ID or name" },
+      tableId: {
+        type: "string",
+        required: true,
+        description: "Table ID or name",
+      },
       recordId: { type: "string", required: true, description: "Record ID" },
     },
     async execute(input, ctx) {
@@ -354,7 +463,11 @@ export default function airtable(rl: RunlinePluginAPI) {
         tableId: string;
         recordId: string;
       };
-      return apiRequest(getToken(ctx), "DELETE", `${baseId}/${tableId}/${recordId}`);
+      return apiRequest(
+        getToken(ctx),
+        "DELETE",
+        `${baseId}/${tableId}/${recordId}`,
+      );
     },
   });
 }

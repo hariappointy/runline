@@ -14,6 +14,9 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
-      - run: bun install
+      - run: bun install --frozen-lockfile
       - run: bun --filter runline build
       - run: bun --filter runline test
+      # Lint/format across the whole monorepo — catches issues in
+      # pi-runline and runline-plugins that the runline filter misses.
+      - run: bun run check

@@ -3,20 +3,34 @@ import type { RunlinePluginAPI } from "runline";
 const BASE = "https://www.strava.com/api/v3";
 
 async function apiRequest(
-  token: string, method: string, endpoint: string,
-  body?: Record<string, unknown>, qs?: Record<string, unknown>,
+  token: string,
+  method: string,
+  endpoint: string,
+  body?: Record<string, unknown>,
+  qs?: Record<string, unknown>,
 ): Promise<unknown> {
   const url = new URL(`${BASE}${endpoint}`);
-  if (qs) { for (const [k, v] of Object.entries(qs)) { if (v !== undefined && v !== null) url.searchParams.set(k, String(v)); } }
-  const init: RequestInit = { method, headers: { Authorization: `Bearer ${token}` } };
+  if (qs) {
+    for (const [k, v] of Object.entries(qs)) {
+      if (v !== undefined && v !== null) url.searchParams.set(k, String(v));
+    }
+  }
+  const init: RequestInit = {
+    method,
+    headers: { Authorization: `Bearer ${token}` },
+  };
   if (body && Object.keys(body).length > 0) {
     const form = new URLSearchParams();
-    for (const [k, v] of Object.entries(body)) { if (v !== undefined && v !== null) form.set(k, String(v)); }
+    for (const [k, v] of Object.entries(body)) {
+      if (v !== undefined && v !== null) form.set(k, String(v));
+    }
     init.body = form;
-    (init.headers as Record<string, string>)["Content-Type"] = "application/x-www-form-urlencoded";
+    (init.headers as Record<string, string>)["Content-Type"] =
+      "application/x-www-form-urlencoded";
   }
   const res = await fetch(url.toString(), init);
-  if (!res.ok) throw new Error(`Strava error ${res.status}: ${await res.text()}`);
+  if (!res.ok)
+    throw new Error(`Strava error ${res.status}: ${await res.text()}`);
   return res.json();
 }
 
@@ -25,27 +39,50 @@ export default function strava(rl: RunlinePluginAPI) {
   rl.setVersion("0.1.0");
 
   rl.setConnectionSchema({
-    accessToken: { type: "string", required: true, description: "Strava OAuth2 access token", env: "STRAVA_ACCESS_TOKEN" },
+    accessToken: {
+      type: "string",
+      required: true,
+      description: "Strava OAuth2 access token",
+      env: "STRAVA_ACCESS_TOKEN",
+    },
   });
 
-  const key = (ctx: { connection: { config: Record<string, unknown> } }) => ctx.connection.config.accessToken as string;
+  const key = (ctx: { connection: { config: Record<string, unknown> } }) =>
+    ctx.connection.config.accessToken as string;
 
   rl.registerAction("activity.create", {
     description: "Create an activity",
     inputSchema: {
       name: { type: "string", required: true },
-      sportType: { type: "string", required: true, description: "e.g. Run, Ride, Swim, Hike" },
-      startDateLocal: { type: "string", required: true, description: "ISO 8601 start time" },
-      elapsedTime: { type: "number", required: true, description: "Duration in seconds" },
+      sportType: {
+        type: "string",
+        required: true,
+        description: "e.g. Run, Ride, Swim, Hike",
+      },
+      startDateLocal: {
+        type: "string",
+        required: true,
+        description: "ISO 8601 start time",
+      },
+      elapsedTime: {
+        type: "number",
+        required: true,
+        description: "Duration in seconds",
+      },
       description: { type: "string", required: false },
-      distance: { type: "number", required: false, description: "Distance in meters" },
+      distance: {
+        type: "number",
+        required: false,
+        description: "Distance in meters",
+      },
       trainer: { type: "boolean", required: false },
       commute: { type: "boolean", required: false },
     },
     async execute(input, ctx) {
       const p = input as Record<string, unknown>;
       const body: Record<string, unknown> = {
-        name: p.name, sport_type: p.sportType,
+        name: p.name,
+        sport_type: p.sportType,
         start_date_local: new Date(p.startDateLocal as string).toISOString(),
         elapsed_time: p.elapsedTime,
       };
@@ -61,7 +98,11 @@ export default function strava(rl: RunlinePluginAPI) {
     description: "Get an activity by ID",
     inputSchema: { activityId: { type: "string", required: true } },
     async execute(input, ctx) {
-      return apiRequest(key(ctx), "GET", `/activities/${(input as Record<string, unknown>).activityId}`);
+      return apiRequest(
+        key(ctx),
+        "GET",
+        `/activities/${(input as Record<string, unknown>).activityId}`,
+      );
     },
   });
 
@@ -70,7 +111,8 @@ export default function strava(rl: RunlinePluginAPI) {
     inputSchema: { limit: { type: "number", required: false } },
     async execute(input, ctx) {
       const qs: Record<string, unknown> = {};
-      if ((input as Record<string, unknown>)?.limit) qs.per_page = (input as Record<string, unknown>).limit;
+      if ((input as Record<string, unknown>)?.limit)
+        qs.per_page = (input as Record<string, unknown>).limit;
       return apiRequest(key(ctx), "GET", "/activities", undefined, qs);
     },
   });
@@ -101,16 +143,35 @@ export default function strava(rl: RunlinePluginAPI) {
 
   for (const sub of [
     { name: "getLaps", path: "laps", description: "Get laps for an activity" },
-    { name: "getZones", path: "zones", description: "Get zones for an activity" },
-    { name: "getKudos", path: "kudos", description: "Get kudos for an activity" },
-    { name: "getComments", path: "comments", description: "Get comments for an activity" },
+    {
+      name: "getZones",
+      path: "zones",
+      description: "Get zones for an activity",
+    },
+    {
+      name: "getKudos",
+      path: "kudos",
+      description: "Get kudos for an activity",
+    },
+    {
+      name: "getComments",
+      path: "comments",
+      description: "Get comments for an activity",
+    },
   ]) {
     rl.registerAction(`activity.${sub.name}`, {
       description: sub.description,
-      inputSchema: { activityId: { type: "string", required: true }, limit: { type: "number", required: false } },
+      inputSchema: {
+        activityId: { type: "string", required: true },
+        limit: { type: "number", required: false },
+      },
       async execute(input, ctx) {
         const p = input as Record<string, unknown>;
-        const data = (await apiRequest(key(ctx), "GET", `/activities/${p.activityId}/${sub.path}`)) as unknown[];
+        const data = (await apiRequest(
+          key(ctx),
+          "GET",
+          `/activities/${p.activityId}/${sub.path}`,
+        )) as unknown[];
         if (p.limit) return data.slice(0, p.limit as number);
         return data;
       },
@@ -121,11 +182,22 @@ export default function strava(rl: RunlinePluginAPI) {
     description: "Get activity streams (time-series data)",
     inputSchema: {
       activityId: { type: "string", required: true },
-      keys: { type: "string", required: true, description: "Comma-separated stream types: time, distance, latlng, altitude, heartrate, cadence, watts, temp, moving, grade_smooth" },
+      keys: {
+        type: "string",
+        required: true,
+        description:
+          "Comma-separated stream types: time, distance, latlng, altitude, heartrate, cadence, watts, temp, moving, grade_smooth",
+      },
     },
     async execute(input, ctx) {
       const p = input as Record<string, unknown>;
-      return apiRequest(key(ctx), "GET", `/activities/${p.activityId}/streams`, undefined, { keys: p.keys, key_by_type: "true" });
+      return apiRequest(
+        key(ctx),
+        "GET",
+        `/activities/${p.activityId}/streams`,
+        undefined,
+        { keys: p.keys, key_by_type: "true" },
+      );
     },
   });
 }

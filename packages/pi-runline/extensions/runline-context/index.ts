@@ -86,7 +86,9 @@ export default function (pi: ExtensionAPI) {
         typeof message.content === "string"
           ? message.content
           : message.content
-              .filter((c): c is { type: "text"; text: string } => c.type === "text")
+              .filter(
+                (c): c is { type: "text"; text: string } => c.type === "text",
+              )
               .map((c) => c.text)
               .join("\n");
       return new Markdown(

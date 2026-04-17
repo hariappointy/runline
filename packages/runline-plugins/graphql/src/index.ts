@@ -5,27 +5,60 @@ export default function graphql(rl: RunlinePluginAPI) {
   rl.setVersion("0.1.0");
 
   rl.setConnectionSchema({
-    endpoint: { type: "string", required: true, description: "GraphQL endpoint URL", env: "GRAPHQL_ENDPOINT" },
-    headerAuth: { type: "string", required: false, description: "Authorization header value (e.g. 'Bearer xxx')", env: "GRAPHQL_AUTH_HEADER" },
-    headers: { type: "object", required: false, description: "Additional headers as key-value pairs" },
+    endpoint: {
+      type: "string",
+      required: true,
+      description: "GraphQL endpoint URL",
+      env: "GRAPHQL_ENDPOINT",
+    },
+    headerAuth: {
+      type: "string",
+      required: false,
+      description: "Authorization header value (e.g. 'Bearer xxx')",
+      env: "GRAPHQL_AUTH_HEADER",
+    },
+    headers: {
+      type: "object",
+      required: false,
+      description: "Additional headers as key-value pairs",
+    },
   });
 
   rl.registerAction("query", {
     description: "Execute a GraphQL query",
     inputSchema: {
-      query: { type: "string", required: true, description: "GraphQL query or mutation string" },
-      variables: { type: "object", required: false, description: "Query variables" },
-      operationName: { type: "string", required: false, description: "Operation name (if query contains multiple)" },
+      query: {
+        type: "string",
+        required: true,
+        description: "GraphQL query or mutation string",
+      },
+      variables: {
+        type: "object",
+        required: false,
+        description: "Query variables",
+      },
+      operationName: {
+        type: "string",
+        required: false,
+        description: "Operation name (if query contains multiple)",
+      },
     },
     async execute(input, ctx) {
-      const { query, variables, operationName } = input as Record<string, unknown>;
+      const { query, variables, operationName } = input as Record<
+        string,
+        unknown
+      >;
       const cfg = ctx.connection.config;
       const endpoint = cfg.endpoint as string;
 
-      const hdrs: Record<string, string> = { "Content-Type": "application/json" };
+      const hdrs: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
       if (cfg.headerAuth) hdrs.Authorization = cfg.headerAuth as string;
       if (cfg.headers) {
-        for (const [k, v] of Object.entries(cfg.headers as Record<string, string>)) {
+        for (const [k, v] of Object.entries(
+          cfg.headers as Record<string, string>,
+        )) {
           hdrs[k] = v;
         }
       }
@@ -40,9 +73,11 @@ export default function graphql(rl: RunlinePluginAPI) {
         body: JSON.stringify(body),
       });
 
-      if (!res.ok) throw new Error(`GraphQL error ${res.status}: ${await res.text()}`);
+      if (!res.ok)
+        throw new Error(`GraphQL error ${res.status}: ${await res.text()}`);
       const data = (await res.json()) as Record<string, unknown>;
-      if (data.errors) throw new Error(`GraphQL errors: ${JSON.stringify(data.errors)}`);
+      if (data.errors)
+        throw new Error(`GraphQL errors: ${JSON.stringify(data.errors)}`);
       return data.data;
     },
   });
@@ -53,10 +88,14 @@ export default function graphql(rl: RunlinePluginAPI) {
       const cfg = ctx.connection.config;
       const endpoint = cfg.endpoint as string;
 
-      const hdrs: Record<string, string> = { "Content-Type": "application/json" };
+      const hdrs: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
       if (cfg.headerAuth) hdrs.Authorization = cfg.headerAuth as string;
       if (cfg.headers) {
-        for (const [k, v] of Object.entries(cfg.headers as Record<string, string>)) {
+        for (const [k, v] of Object.entries(
+          cfg.headers as Record<string, string>,
+        )) {
           hdrs[k] = v;
         }
       }
@@ -76,7 +115,8 @@ export default function graphql(rl: RunlinePluginAPI) {
         body: JSON.stringify({ query: introspectionQuery }),
       });
 
-      if (!res.ok) throw new Error(`GraphQL error ${res.status}: ${await res.text()}`);
+      if (!res.ok)
+        throw new Error(`GraphQL error ${res.status}: ${await res.text()}`);
       const data = (await res.json()) as Record<string, unknown>;
       return data.data;
     },

@@ -18,7 +18,8 @@ async function apiRequest(
     method,
     headers: { "DHL-API-Key": apiKey, Accept: "application/json" },
   });
-  if (!res.ok) throw new Error(`DHL API error ${res.status}: ${await res.text()}`);
+  if (!res.ok)
+    throw new Error(`DHL API error ${res.status}: ${await res.text()}`);
   return res.json();
 }
 
@@ -27,21 +28,42 @@ export default function dhl(rl: RunlinePluginAPI) {
   rl.setVersion("0.1.0");
 
   rl.setConnectionSchema({
-    apiKey: { type: "string", required: true, description: "DHL API key", env: "DHL_API_KEY" },
+    apiKey: {
+      type: "string",
+      required: true,
+      description: "DHL API key",
+      env: "DHL_API_KEY",
+    },
   });
 
   rl.registerAction("shipment.track", {
     description: "Get tracking details for a shipment",
     inputSchema: {
-      trackingNumber: { type: "string", required: true, description: "DHL tracking number" },
-      recipientPostalCode: { type: "string", required: false, description: "Recipient postal code for more detailed info" },
+      trackingNumber: {
+        type: "string",
+        required: true,
+        description: "DHL tracking number",
+      },
+      recipientPostalCode: {
+        type: "string",
+        required: false,
+        description: "Recipient postal code for more detailed info",
+      },
     },
     async execute(input, ctx) {
-      const { trackingNumber, recipientPostalCode } = input as Record<string, unknown>;
+      const { trackingNumber, recipientPostalCode } = input as Record<
+        string,
+        unknown
+      >;
       const apiKey = ctx.connection.config.apiKey as string;
       const qs: Record<string, unknown> = { trackingNumber };
       if (recipientPostalCode) qs.recipientPostalCode = recipientPostalCode;
-      const data = (await apiRequest(apiKey, "GET", "/track/shipments", qs)) as Record<string, unknown>;
+      const data = (await apiRequest(
+        apiKey,
+        "GET",
+        "/track/shipments",
+        qs,
+      )) as Record<string, unknown>;
       return data.shipments;
     },
   });

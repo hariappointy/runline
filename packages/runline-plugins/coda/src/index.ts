@@ -17,13 +17,22 @@ async function apiRequest(
   }
   const opts: RequestInit = {
     method,
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
   };
-  if (body && Object.keys(body).length > 0 && method !== "GET" && method !== "DELETE") {
+  if (
+    body &&
+    Object.keys(body).length > 0 &&
+    method !== "GET" &&
+    method !== "DELETE"
+  ) {
     opts.body = JSON.stringify(body);
   }
   const res = await fetch(url.toString(), opts);
-  if (!res.ok) throw new Error(`Coda API error ${res.status}: ${await res.text()}`);
+  if (!res.ok)
+    throw new Error(`Coda API error ${res.status}: ${await res.text()}`);
   if (res.status === 204) return { success: true };
   return res.json();
 }
@@ -39,7 +48,13 @@ async function paginateAll(
   while (true) {
     const q = { ...qs } as Record<string, unknown>;
     if (pageToken) q.pageToken = pageToken;
-    const data = (await apiRequest(token, "GET", endpoint, undefined, q)) as Record<string, unknown>;
+    const data = (await apiRequest(
+      token,
+      "GET",
+      endpoint,
+      undefined,
+      q,
+    )) as Record<string, unknown>;
     const items = (data.items as unknown[]) ?? [];
     results.push(...items);
     if (limit && results.length >= limit) return results.slice(0, limit);
@@ -49,7 +64,9 @@ async function paginateAll(
   return results;
 }
 
-function getToken(ctx: { connection: { config: Record<string, unknown> } }): string {
+function getToken(ctx: {
+  connection: { config: Record<string, unknown> };
+}): string {
   return ctx.connection.config.accessToken as string;
 }
 
@@ -73,18 +90,39 @@ export default function coda(rl: RunlinePluginAPI) {
     inputSchema: {
       docId: { type: "string", required: true, description: "Doc ID" },
       tableId: { type: "string", required: true, description: "Table ID" },
-      cells: { type: "object", required: true, description: "Column-value pairs" },
-      keyColumns: { type: "array", required: false, description: "Key columns for upsert" },
-      disableParsing: { type: "boolean", required: false, description: "Disable value parsing" },
+      cells: {
+        type: "object",
+        required: true,
+        description: "Column-value pairs",
+      },
+      keyColumns: {
+        type: "array",
+        required: false,
+        description: "Key columns for upsert",
+      },
+      disableParsing: {
+        type: "boolean",
+        required: false,
+        description: "Disable value parsing",
+      },
     },
     async execute(input, ctx) {
-      const { docId, tableId, cells, keyColumns, disableParsing } = input as Record<string, unknown>;
+      const { docId, tableId, cells, keyColumns, disableParsing } =
+        input as Record<string, unknown>;
       const qs: Record<string, unknown> = {};
       if (disableParsing) qs.disableParsing = true;
-      const row = Object.entries(cells as Record<string, unknown>).map(([column, value]) => ({ column, value }));
+      const row = Object.entries(cells as Record<string, unknown>).map(
+        ([column, value]) => ({ column, value }),
+      );
       const body: Record<string, unknown> = { rows: [{ cells: row }] };
       if (keyColumns) body.keyColumns = keyColumns;
-      return apiRequest(getToken(ctx), "POST", `/docs/${docId}/tables/${tableId}/rows`, body, qs);
+      return apiRequest(
+        getToken(ctx),
+        "POST",
+        `/docs/${docId}/tables/${tableId}/rows`,
+        body,
+        qs,
+      );
     },
   });
 
@@ -94,14 +132,34 @@ export default function coda(rl: RunlinePluginAPI) {
       docId: { type: "string", required: true, description: "Doc ID" },
       tableId: { type: "string", required: true, description: "Table ID" },
       rowId: { type: "string", required: true, description: "Row ID or name" },
-      useColumnNames: { type: "boolean", required: false, description: "Use column names (default: true)" },
-      valueFormat: { type: "string", required: false, description: "Value format: simple, simpleWithArrays, rich" },
+      useColumnNames: {
+        type: "boolean",
+        required: false,
+        description: "Use column names (default: true)",
+      },
+      valueFormat: {
+        type: "string",
+        required: false,
+        description: "Value format: simple, simpleWithArrays, rich",
+      },
     },
     async execute(input, ctx) {
-      const { docId, tableId, rowId, useColumnNames = true, valueFormat } = input as Record<string, unknown>;
+      const {
+        docId,
+        tableId,
+        rowId,
+        useColumnNames = true,
+        valueFormat,
+      } = input as Record<string, unknown>;
       const qs: Record<string, unknown> = { useColumnNames };
       if (valueFormat) qs.valueFormat = valueFormat;
-      const data = (await apiRequest(getToken(ctx), "GET", `/docs/${docId}/tables/${tableId}/rows/${rowId}`, undefined, qs)) as Record<string, unknown>;
+      const data = (await apiRequest(
+        getToken(ctx),
+        "GET",
+        `/docs/${docId}/tables/${tableId}/rows/${rowId}`,
+        undefined,
+        qs,
+      )) as Record<string, unknown>;
       return { id: data.id, ...(data.values as Record<string, unknown>) };
     },
   });
@@ -113,20 +171,45 @@ export default function coda(rl: RunlinePluginAPI) {
       tableId: { type: "string", required: true, description: "Table ID" },
       query: { type: "string", required: false, description: "Search query" },
       sortBy: { type: "string", required: false, description: "Sort column" },
-      useColumnNames: { type: "boolean", required: false, description: "Use column names (default: true)" },
-      valueFormat: { type: "string", required: false, description: "Value format" },
-      visibleOnly: { type: "boolean", required: false, description: "Only visible rows" },
+      useColumnNames: {
+        type: "boolean",
+        required: false,
+        description: "Use column names (default: true)",
+      },
+      valueFormat: {
+        type: "string",
+        required: false,
+        description: "Value format",
+      },
+      visibleOnly: {
+        type: "boolean",
+        required: false,
+        description: "Only visible rows",
+      },
       limit: { type: "number", required: false, description: "Max results" },
     },
     async execute(input, ctx) {
-      const { docId, tableId, query, sortBy, useColumnNames = true, valueFormat, visibleOnly, limit } =
-        (input ?? {}) as Record<string, unknown>;
+      const {
+        docId,
+        tableId,
+        query,
+        sortBy,
+        useColumnNames = true,
+        valueFormat,
+        visibleOnly,
+        limit,
+      } = (input ?? {}) as Record<string, unknown>;
       const qs: Record<string, unknown> = { useColumnNames };
       if (query) qs.query = query;
       if (sortBy) qs.sortBy = sortBy;
       if (valueFormat) qs.valueFormat = valueFormat;
       if (visibleOnly) qs.visibleOnly = visibleOnly;
-      const rows = await paginateAll(getToken(ctx), `/docs/${docId}/tables/${tableId}/rows`, qs, limit as number | undefined);
+      const rows = await paginateAll(
+        getToken(ctx),
+        `/docs/${docId}/tables/${tableId}/rows`,
+        qs,
+        limit as number | undefined,
+      );
       return rows.map((r) => {
         const row = r as Record<string, unknown>;
         return { id: row.id, ...(row.values as Record<string, unknown>) };
@@ -143,7 +226,12 @@ export default function coda(rl: RunlinePluginAPI) {
     },
     async execute(input, ctx) {
       const { docId, tableId, rowId } = input as Record<string, string>;
-      return apiRequest(getToken(ctx), "DELETE", `/docs/${docId}/tables/${tableId}/rows`, { rowIds: [rowId] });
+      return apiRequest(
+        getToken(ctx),
+        "DELETE",
+        `/docs/${docId}/tables/${tableId}/rows`,
+        { rowIds: [rowId] },
+      );
     },
   });
 
@@ -153,11 +241,22 @@ export default function coda(rl: RunlinePluginAPI) {
       docId: { type: "string", required: true, description: "Doc ID" },
       tableId: { type: "string", required: true, description: "Table ID" },
       rowId: { type: "string", required: true, description: "Row ID" },
-      columnId: { type: "string", required: true, description: "Button column ID" },
+      columnId: {
+        type: "string",
+        required: true,
+        description: "Button column ID",
+      },
     },
     async execute(input, ctx) {
-      const { docId, tableId, rowId, columnId } = input as Record<string, string>;
-      return apiRequest(getToken(ctx), "POST", `/docs/${docId}/tables/${tableId}/rows/${rowId}/buttons/${columnId}`);
+      const { docId, tableId, rowId, columnId } = input as Record<
+        string,
+        string
+      >;
+      return apiRequest(
+        getToken(ctx),
+        "POST",
+        `/docs/${docId}/tables/${tableId}/rows/${rowId}/buttons/${columnId}`,
+      );
     },
   });
 
@@ -172,7 +271,11 @@ export default function coda(rl: RunlinePluginAPI) {
     },
     async execute(input, ctx) {
       const { docId, tableId, columnId } = input as Record<string, string>;
-      return apiRequest(getToken(ctx), "GET", `/docs/${docId}/tables/${tableId}/columns/${columnId}`);
+      return apiRequest(
+        getToken(ctx),
+        "GET",
+        `/docs/${docId}/tables/${tableId}/columns/${columnId}`,
+      );
     },
   });
 
@@ -184,8 +287,16 @@ export default function coda(rl: RunlinePluginAPI) {
       limit: { type: "number", required: false, description: "Max results" },
     },
     async execute(input, ctx) {
-      const { docId, tableId, limit } = (input ?? {}) as Record<string, unknown>;
-      return paginateAll(getToken(ctx), `/docs/${docId}/tables/${tableId}/columns`, undefined, limit as number | undefined);
+      const { docId, tableId, limit } = (input ?? {}) as Record<
+        string,
+        unknown
+      >;
+      return paginateAll(
+        getToken(ctx),
+        `/docs/${docId}/tables/${tableId}/columns`,
+        undefined,
+        limit as number | undefined,
+      );
     },
   });
 
@@ -199,7 +310,11 @@ export default function coda(rl: RunlinePluginAPI) {
     },
     async execute(input, ctx) {
       const { docId, formulaId } = input as Record<string, string>;
-      return apiRequest(getToken(ctx), "GET", `/docs/${docId}/formulas/${formulaId}`);
+      return apiRequest(
+        getToken(ctx),
+        "GET",
+        `/docs/${docId}/formulas/${formulaId}`,
+      );
     },
   });
 
@@ -211,7 +326,12 @@ export default function coda(rl: RunlinePluginAPI) {
     },
     async execute(input, ctx) {
       const { docId, limit } = (input ?? {}) as Record<string, unknown>;
-      return paginateAll(getToken(ctx), `/docs/${docId}/formulas`, undefined, limit as number | undefined);
+      return paginateAll(
+        getToken(ctx),
+        `/docs/${docId}/formulas`,
+        undefined,
+        limit as number | undefined,
+      );
     },
   });
 
@@ -225,7 +345,11 @@ export default function coda(rl: RunlinePluginAPI) {
     },
     async execute(input, ctx) {
       const { docId, controlId } = input as Record<string, string>;
-      return apiRequest(getToken(ctx), "GET", `/docs/${docId}/controls/${controlId}`);
+      return apiRequest(
+        getToken(ctx),
+        "GET",
+        `/docs/${docId}/controls/${controlId}`,
+      );
     },
   });
 
@@ -237,7 +361,12 @@ export default function coda(rl: RunlinePluginAPI) {
     },
     async execute(input, ctx) {
       const { docId, limit } = (input ?? {}) as Record<string, unknown>;
-      return paginateAll(getToken(ctx), `/docs/${docId}/controls`, undefined, limit as number | undefined);
+      return paginateAll(
+        getToken(ctx),
+        `/docs/${docId}/controls`,
+        undefined,
+        limit as number | undefined,
+      );
     },
   });
 
@@ -251,7 +380,11 @@ export default function coda(rl: RunlinePluginAPI) {
     },
     async execute(input, ctx) {
       const { docId, viewId } = input as Record<string, string>;
-      return apiRequest(getToken(ctx), "GET", `/docs/${docId}/tables/${viewId}`);
+      return apiRequest(
+        getToken(ctx),
+        "GET",
+        `/docs/${docId}/tables/${viewId}`,
+      );
     },
   });
 
@@ -263,7 +396,12 @@ export default function coda(rl: RunlinePluginAPI) {
     },
     async execute(input, ctx) {
       const { docId, limit } = (input ?? {}) as Record<string, unknown>;
-      return paginateAll(getToken(ctx), `/docs/${docId}/tables`, { tableTypes: "view" }, limit as number | undefined);
+      return paginateAll(
+        getToken(ctx),
+        `/docs/${docId}/tables`,
+        { tableTypes: "view" },
+        limit as number | undefined,
+      );
     },
   });
 
@@ -274,18 +412,38 @@ export default function coda(rl: RunlinePluginAPI) {
       viewId: { type: "string", required: true, description: "View ID" },
       query: { type: "string", required: false, description: "Search query" },
       sortBy: { type: "string", required: false, description: "Sort column" },
-      useColumnNames: { type: "boolean", required: false, description: "Use column names (default: true)" },
-      valueFormat: { type: "string", required: false, description: "Value format" },
+      useColumnNames: {
+        type: "boolean",
+        required: false,
+        description: "Use column names (default: true)",
+      },
+      valueFormat: {
+        type: "string",
+        required: false,
+        description: "Value format",
+      },
       limit: { type: "number", required: false, description: "Max results" },
     },
     async execute(input, ctx) {
-      const { docId, viewId, query, sortBy, useColumnNames = true, valueFormat, limit } =
-        (input ?? {}) as Record<string, unknown>;
+      const {
+        docId,
+        viewId,
+        query,
+        sortBy,
+        useColumnNames = true,
+        valueFormat,
+        limit,
+      } = (input ?? {}) as Record<string, unknown>;
       const qs: Record<string, unknown> = { useColumnNames };
       if (query) qs.query = query;
       if (sortBy) qs.sortBy = sortBy;
       if (valueFormat) qs.valueFormat = valueFormat;
-      const rows = await paginateAll(getToken(ctx), `/docs/${docId}/tables/${viewId}/rows`, qs, limit as number | undefined);
+      const rows = await paginateAll(
+        getToken(ctx),
+        `/docs/${docId}/tables/${viewId}/rows`,
+        qs,
+        limit as number | undefined,
+      );
       return rows.map((r) => {
         const row = r as Record<string, unknown>;
         return { id: row.id, ...(row.values as Record<string, unknown>) };
@@ -302,7 +460,11 @@ export default function coda(rl: RunlinePluginAPI) {
     },
     async execute(input, ctx) {
       const { docId, viewId, rowId } = input as Record<string, string>;
-      return apiRequest(getToken(ctx), "DELETE", `/docs/${docId}/tables/${viewId}/rows/${rowId}`);
+      return apiRequest(
+        getToken(ctx),
+        "DELETE",
+        `/docs/${docId}/tables/${viewId}/rows/${rowId}`,
+      );
     },
   });
 
@@ -312,15 +474,34 @@ export default function coda(rl: RunlinePluginAPI) {
       docId: { type: "string", required: true, description: "Doc ID" },
       viewId: { type: "string", required: true, description: "View ID" },
       rowId: { type: "string", required: true, description: "Row ID" },
-      cells: { type: "object", required: true, description: "Column-value pairs to update" },
-      disableParsing: { type: "boolean", required: false, description: "Disable value parsing" },
+      cells: {
+        type: "object",
+        required: true,
+        description: "Column-value pairs to update",
+      },
+      disableParsing: {
+        type: "boolean",
+        required: false,
+        description: "Disable value parsing",
+      },
     },
     async execute(input, ctx) {
-      const { docId, viewId, rowId, cells, disableParsing } = input as Record<string, unknown>;
+      const { docId, viewId, rowId, cells, disableParsing } = input as Record<
+        string,
+        unknown
+      >;
       const qs: Record<string, unknown> = {};
       if (disableParsing) qs.disableParsing = true;
-      const row = Object.entries(cells as Record<string, unknown>).map(([column, value]) => ({ column, value }));
-      return apiRequest(getToken(ctx), "PUT", `/docs/${docId}/tables/${viewId}/rows/${rowId}`, { row: { cells: row } }, qs);
+      const row = Object.entries(cells as Record<string, unknown>).map(
+        ([column, value]) => ({ column, value }),
+      );
+      return apiRequest(
+        getToken(ctx),
+        "PUT",
+        `/docs/${docId}/tables/${viewId}/rows/${rowId}`,
+        { row: { cells: row } },
+        qs,
+      );
     },
   });
 
@@ -330,11 +511,22 @@ export default function coda(rl: RunlinePluginAPI) {
       docId: { type: "string", required: true, description: "Doc ID" },
       viewId: { type: "string", required: true, description: "View ID" },
       rowId: { type: "string", required: true, description: "Row ID" },
-      columnId: { type: "string", required: true, description: "Button column ID" },
+      columnId: {
+        type: "string",
+        required: true,
+        description: "Button column ID",
+      },
     },
     async execute(input, ctx) {
-      const { docId, viewId, rowId, columnId } = input as Record<string, string>;
-      return apiRequest(getToken(ctx), "POST", `/docs/${docId}/tables/${viewId}/rows/${rowId}/buttons/${columnId}`);
+      const { docId, viewId, rowId, columnId } = input as Record<
+        string,
+        string
+      >;
+      return apiRequest(
+        getToken(ctx),
+        "POST",
+        `/docs/${docId}/tables/${viewId}/rows/${rowId}/buttons/${columnId}`,
+      );
     },
   });
 
@@ -347,7 +539,12 @@ export default function coda(rl: RunlinePluginAPI) {
     },
     async execute(input, ctx) {
       const { docId, viewId, limit } = (input ?? {}) as Record<string, unknown>;
-      return paginateAll(getToken(ctx), `/docs/${docId}/tables/${viewId}/columns`, undefined, limit as number | undefined);
+      return paginateAll(
+        getToken(ctx),
+        `/docs/${docId}/tables/${viewId}/columns`,
+        undefined,
+        limit as number | undefined,
+      );
     },
   });
 }

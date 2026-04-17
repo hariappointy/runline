@@ -14,7 +14,8 @@ async function apiRequest(
     if (v !== undefined && v !== null) url.searchParams.set(k, String(v));
   }
   const res = await fetch(url.toString());
-  if (!res.ok) throw new Error(`OneSimpleAPI error ${res.status}: ${await res.text()}`);
+  if (!res.ok)
+    throw new Error(`OneSimpleAPI error ${res.status}: ${await res.text()}`);
   return res.json();
 }
 
@@ -23,10 +24,16 @@ export default function oneSimpleApi(rl: RunlinePluginAPI) {
   rl.setVersion("0.1.0");
 
   rl.setConnectionSchema({
-    apiToken: { type: "string", required: true, description: "OneSimpleAPI token", env: "ONE_SIMPLE_API_TOKEN" },
+    apiToken: {
+      type: "string",
+      required: true,
+      description: "OneSimpleAPI token",
+      env: "ONE_SIMPLE_API_TOKEN",
+    },
   });
 
-  const key = (ctx: { connection: { config: Record<string, unknown> } }) => ctx.connection.config.apiToken as string;
+  const key = (ctx: { connection: { config: Record<string, unknown> } }) =>
+    ctx.connection.config.apiToken as string;
 
   // ── Website ─────────────────────────────────────────
 
@@ -34,8 +41,16 @@ export default function oneSimpleApi(rl: RunlinePluginAPI) {
     description: "Generate a PDF from a webpage (returns URL to the PDF)",
     inputSchema: {
       url: { type: "string", required: true, description: "Webpage URL" },
-      page: { type: "string", required: false, description: "Page size: A0-A6, Letter, Legal, Tabloid, Ledger" },
-      force: { type: "boolean", required: false, description: "Force refresh (default false)" },
+      page: {
+        type: "string",
+        required: false,
+        description: "Page size: A0-A6, Letter, Legal, Tabloid, Ledger",
+      },
+      force: {
+        type: "boolean",
+        required: false,
+        description: "Force refresh (default false)",
+      },
     },
     async execute(input, ctx) {
       const p = (input ?? {}) as Record<string, unknown>;
@@ -50,9 +65,22 @@ export default function oneSimpleApi(rl: RunlinePluginAPI) {
     description: "Take a screenshot of a webpage (returns URL to the image)",
     inputSchema: {
       url: { type: "string", required: true, description: "Webpage URL" },
-      screen: { type: "string", required: false, description: "Screen size: phone, phone-landscape, tablet, tablet-landscape, retina" },
-      fullpage: { type: "boolean", required: false, description: "Capture full page (default false)" },
-      force: { type: "boolean", required: false, description: "Force refresh (default false)" },
+      screen: {
+        type: "string",
+        required: false,
+        description:
+          "Screen size: phone, phone-landscape, tablet, tablet-landscape, retina",
+      },
+      fullpage: {
+        type: "boolean",
+        required: false,
+        description: "Capture full page (default false)",
+      },
+      force: {
+        type: "boolean",
+        required: false,
+        description: "Force refresh (default false)",
+      },
     },
     async execute(input, ctx) {
       const p = (input ?? {}) as Record<string, unknown>;
@@ -68,7 +96,11 @@ export default function oneSimpleApi(rl: RunlinePluginAPI) {
     description: "Get SEO information from a webpage",
     inputSchema: {
       url: { type: "string", required: true, description: "Webpage URL" },
-      headers: { type: "boolean", required: false, description: "Include response headers (default false)" },
+      headers: {
+        type: "boolean",
+        required: false,
+        description: "Include response headers (default false)",
+      },
     },
     async execute(input, ctx) {
       const p = (input ?? {}) as Record<string, unknown>;
@@ -83,7 +115,11 @@ export default function oneSimpleApi(rl: RunlinePluginAPI) {
   rl.registerAction("socialProfile.instagram", {
     description: "Get details about an Instagram profile",
     inputSchema: {
-      profile: { type: "string", required: true, description: "Instagram profile name" },
+      profile: {
+        type: "string",
+        required: true,
+        description: "Instagram profile name",
+      },
     },
     async execute(input, ctx) {
       const { profile } = input as Record<string, unknown>;
@@ -94,7 +130,11 @@ export default function oneSimpleApi(rl: RunlinePluginAPI) {
   rl.registerAction("socialProfile.spotify", {
     description: "Get details about a Spotify artist",
     inputSchema: {
-      profile: { type: "string", required: true, description: "Spotify artist name" },
+      profile: {
+        type: "string",
+        required: true,
+        description: "Spotify artist name",
+      },
     },
     async execute(input, ctx) {
       const { profile } = input as Record<string, unknown>;
@@ -107,14 +147,31 @@ export default function oneSimpleApi(rl: RunlinePluginAPI) {
   rl.registerAction("information.exchangeRate", {
     description: "Convert a value between currencies",
     inputSchema: {
-      value: { type: "string", required: true, description: "Value to convert" },
-      fromCurrency: { type: "string", required: true, description: "Source currency (e.g. USD)" },
-      toCurrency: { type: "string", required: true, description: "Target currency (e.g. EUR)" },
+      value: {
+        type: "string",
+        required: true,
+        description: "Value to convert",
+      },
+      fromCurrency: {
+        type: "string",
+        required: true,
+        description: "Source currency (e.g. USD)",
+      },
+      toCurrency: {
+        type: "string",
+        required: true,
+        description: "Target currency (e.g. EUR)",
+      },
     },
     async execute(input, ctx) {
-      const { value, fromCurrency, toCurrency } = input as Record<string, unknown>;
+      const { value, fromCurrency, toCurrency } = input as Record<
+        string,
+        unknown
+      >;
       return apiRequest(key(ctx), "/exchange_rate", {
-        from_value: value, from_currency: fromCurrency, to_currency: toCurrency,
+        from_value: value,
+        from_currency: fromCurrency,
+        to_currency: toCurrency,
       });
     },
   });
@@ -135,7 +192,11 @@ export default function oneSimpleApi(rl: RunlinePluginAPI) {
   rl.registerAction("utility.validateEmail", {
     description: "Validate an email address",
     inputSchema: {
-      email: { type: "string", required: true, description: "Email address to validate" },
+      email: {
+        type: "string",
+        required: true,
+        description: "Email address to validate",
+      },
     },
     async execute(input, ctx) {
       const { email } = input as Record<string, unknown>;
@@ -157,9 +218,21 @@ export default function oneSimpleApi(rl: RunlinePluginAPI) {
   rl.registerAction("utility.qrCode", {
     description: "Generate a QR code (returns URL to the image)",
     inputSchema: {
-      message: { type: "string", required: true, description: "Content for the QR code (URL, text, etc.)" },
-      size: { type: "string", required: false, description: "Size: Small, Medium, Large" },
-      format: { type: "string", required: false, description: "Format: PNG or SVG" },
+      message: {
+        type: "string",
+        required: true,
+        description: "Content for the QR code (URL, text, etc.)",
+      },
+      size: {
+        type: "string",
+        required: false,
+        description: "Size: Small, Medium, Large",
+      },
+      format: {
+        type: "string",
+        required: false,
+        description: "Format: PNG or SVG",
+      },
     },
     async execute(input, ctx) {
       const p = (input ?? {}) as Record<string, unknown>;

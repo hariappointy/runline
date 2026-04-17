@@ -38,8 +38,12 @@ describe("PluginRegistry", () => {
     reg.register(makePlugin("slack", ["message.send", "channel.list"]));
     const all = reg.getAllActions();
     assert.equal(all.length, 3);
-    assert.ok(all.some((a) => a.plugin === "github" && a.action.name === "repo.list"));
-    assert.ok(all.some((a) => a.plugin === "slack" && a.action.name === "message.send"));
+    assert.ok(
+      all.some((a) => a.plugin === "github" && a.action.name === "repo.list"),
+    );
+    assert.ok(
+      all.some((a) => a.plugin === "slack" && a.action.name === "message.send"),
+    );
   });
 
   it("resolves a dotted action path", () => {

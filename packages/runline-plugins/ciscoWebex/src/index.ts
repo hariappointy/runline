@@ -23,7 +23,12 @@ async function apiRequest(
       Authorization: `Bearer ${token}`,
     },
   };
-  if (body && Object.keys(body).length > 0 && method !== "GET" && method !== "DELETE") {
+  if (
+    body &&
+    Object.keys(body).length > 0 &&
+    method !== "GET" &&
+    method !== "DELETE"
+  ) {
     opts.body = JSON.stringify(body);
   }
 
@@ -49,10 +54,15 @@ async function paginateAll(
   let nextUrl: string | undefined;
 
   while (true) {
-    const res = await fetch(nextUrl ?? `${BASE_URL}${endpoint}?${new URLSearchParams(Object.entries(q).map(([k, v]) => [k, String(v)]))}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    if (!res.ok) throw new Error(`Webex API error ${res.status}: ${await res.text()}`);
+    const res = await fetch(
+      nextUrl ??
+        `${BASE_URL}${endpoint}?${new URLSearchParams(Object.entries(q).map(([k, v]) => [k, String(v)]))}`,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      },
+    );
+    if (!res.ok)
+      throw new Error(`Webex API error ${res.status}: ${await res.text()}`);
     const data = (await res.json()) as Record<string, unknown>;
     results.push(...((data[property] as unknown[]) ?? []));
 
@@ -68,7 +78,9 @@ async function paginateAll(
   return results;
 }
 
-function getToken(ctx: { connection: { config: Record<string, unknown> } }): string {
+function getToken(ctx: {
+  connection: { config: Record<string, unknown> };
+}): string {
   return ctx.connection.config.accessToken as string;
 }
 
@@ -90,12 +102,32 @@ export default function ciscoWebex(rl: RunlinePluginAPI) {
   rl.registerAction("message.create", {
     description: "Send a message to a room or person",
     inputSchema: {
-      roomId: { type: "string", required: false, description: "Room ID (use this or toPersonId/toPersonEmail)" },
-      toPersonId: { type: "string", required: false, description: "Person ID to message" },
-      toPersonEmail: { type: "string", required: false, description: "Person email to message" },
+      roomId: {
+        type: "string",
+        required: false,
+        description: "Room ID (use this or toPersonId/toPersonEmail)",
+      },
+      toPersonId: {
+        type: "string",
+        required: false,
+        description: "Person ID to message",
+      },
+      toPersonEmail: {
+        type: "string",
+        required: false,
+        description: "Person email to message",
+      },
       text: { type: "string", required: true, description: "Message text" },
-      markdown: { type: "string", required: false, description: "Markdown-formatted message" },
-      files: { type: "array", required: false, description: "Array of file URLs to attach" },
+      markdown: {
+        type: "string",
+        required: false,
+        description: "Markdown-formatted message",
+      },
+      files: {
+        type: "array",
+        required: false,
+        description: "Array of file URLs to attach",
+      },
     },
     async execute(input, ctx) {
       const body = (input ?? {}) as Record<string, unknown>;
@@ -118,13 +150,30 @@ export default function ciscoWebex(rl: RunlinePluginAPI) {
     description: "List messages in a room",
     inputSchema: {
       roomId: { type: "string", required: true, description: "Room ID" },
-      limit: { type: "number", required: false, description: "Max results (omit for all)" },
-      mentionedPeople: { type: "string", required: false, description: "Filter: 'me' or person ID" },
-      before: { type: "string", required: false, description: "List messages before this date (ISO 8601)" },
-      beforeMessage: { type: "string", required: false, description: "List messages before this message ID" },
+      limit: {
+        type: "number",
+        required: false,
+        description: "Max results (omit for all)",
+      },
+      mentionedPeople: {
+        type: "string",
+        required: false,
+        description: "Filter: 'me' or person ID",
+      },
+      before: {
+        type: "string",
+        required: false,
+        description: "List messages before this date (ISO 8601)",
+      },
+      beforeMessage: {
+        type: "string",
+        required: false,
+        description: "List messages before this message ID",
+      },
     },
     async execute(input, ctx) {
-      const { roomId, limit, mentionedPeople, before, beforeMessage } = (input ?? {}) as Record<string, unknown>;
+      const { roomId, limit, mentionedPeople, before, beforeMessage } =
+        (input ?? {}) as Record<string, unknown>;
       const qs: Record<string, unknown> = { roomId };
       if (mentionedPeople) qs.mentionedPeople = mentionedPeople;
       if (before) qs.before = before;
@@ -132,7 +181,13 @@ export default function ciscoWebex(rl: RunlinePluginAPI) {
 
       if (limit) {
         qs.max = limit;
-        const data = (await apiRequest(getToken(ctx), "GET", "/messages", undefined, qs)) as Record<string, unknown>;
+        const data = (await apiRequest(
+          getToken(ctx),
+          "GET",
+          "/messages",
+          undefined,
+          qs,
+        )) as Record<string, unknown>;
         return data.items;
       }
       return paginateAll(getToken(ctx), "/messages", "items", qs);
@@ -144,12 +199,20 @@ export default function ciscoWebex(rl: RunlinePluginAPI) {
     inputSchema: {
       messageId: { type: "string", required: true, description: "Message ID" },
       text: { type: "string", required: false, description: "New plain text" },
-      markdown: { type: "string", required: false, description: "New markdown text" },
+      markdown: {
+        type: "string",
+        required: false,
+        description: "New markdown text",
+      },
     },
     async execute(input, ctx) {
       const { messageId, text, markdown } = input as Record<string, unknown>;
       // Need roomId from original message
-      const original = (await apiRequest(getToken(ctx), "GET", `/messages/${messageId}`)) as Record<string, unknown>;
+      const original = (await apiRequest(
+        getToken(ctx),
+        "GET",
+        `/messages/${messageId}`,
+      )) as Record<string, unknown>;
       const body: Record<string, unknown> = { roomId: original.roomId };
       if (markdown) body.markdown = markdown;
       else if (text) body.text = text;
@@ -175,13 +238,41 @@ export default function ciscoWebex(rl: RunlinePluginAPI) {
     description: "Create a meeting",
     inputSchema: {
       title: { type: "string", required: true, description: "Meeting title" },
-      start: { type: "string", required: true, description: "Start time (ISO 8601)" },
-      end: { type: "string", required: true, description: "End time (ISO 8601)" },
-      invitees: { type: "array", required: false, description: "Array of {email} objects" },
-      agenda: { type: "string", required: false, description: "Meeting agenda" },
-      password: { type: "string", required: false, description: "Meeting password" },
-      enabledAutoRecordMeeting: { type: "boolean", required: false, description: "Auto-record" },
-      allowAnyUserToBeCoHost: { type: "boolean", required: false, description: "Allow any user to be co-host" },
+      start: {
+        type: "string",
+        required: true,
+        description: "Start time (ISO 8601)",
+      },
+      end: {
+        type: "string",
+        required: true,
+        description: "End time (ISO 8601)",
+      },
+      invitees: {
+        type: "array",
+        required: false,
+        description: "Array of {email} objects",
+      },
+      agenda: {
+        type: "string",
+        required: false,
+        description: "Meeting agenda",
+      },
+      password: {
+        type: "string",
+        required: false,
+        description: "Meeting password",
+      },
+      enabledAutoRecordMeeting: {
+        type: "boolean",
+        required: false,
+        description: "Auto-record",
+      },
+      allowAnyUserToBeCoHost: {
+        type: "boolean",
+        required: false,
+        description: "Allow any user to be co-host",
+      },
     },
     async execute(input, ctx) {
       const body = (input ?? {}) as Record<string, unknown>;
@@ -203,14 +294,33 @@ export default function ciscoWebex(rl: RunlinePluginAPI) {
   rl.registerAction("meeting.list", {
     description: "List meetings",
     inputSchema: {
-      from: { type: "string", required: false, description: "Start date filter (ISO 8601)" },
-      to: { type: "string", required: false, description: "End date filter (ISO 8601)" },
-      meetingType: { type: "string", required: false, description: "Meeting type filter" },
+      from: {
+        type: "string",
+        required: false,
+        description: "Start date filter (ISO 8601)",
+      },
+      to: {
+        type: "string",
+        required: false,
+        description: "End date filter (ISO 8601)",
+      },
+      meetingType: {
+        type: "string",
+        required: false,
+        description: "Meeting type filter",
+      },
       state: { type: "string", required: false, description: "State filter" },
-      limit: { type: "number", required: false, description: "Max results (omit for all)" },
+      limit: {
+        type: "number",
+        required: false,
+        description: "Max results (omit for all)",
+      },
     },
     async execute(input, ctx) {
-      const { from, to, meetingType, state, limit } = (input ?? {}) as Record<string, unknown>;
+      const { from, to, meetingType, state, limit } = (input ?? {}) as Record<
+        string,
+        unknown
+      >;
       const qs: Record<string, unknown> = {};
       if (from) qs.from = from;
       if (to) qs.to = to;
@@ -219,7 +329,13 @@ export default function ciscoWebex(rl: RunlinePluginAPI) {
 
       if (limit) {
         qs.max = limit;
-        const data = (await apiRequest(getToken(ctx), "GET", "/meetings", undefined, qs)) as Record<string, unknown>;
+        const data = (await apiRequest(
+          getToken(ctx),
+          "GET",
+          "/meetings",
+          undefined,
+          qs,
+        )) as Record<string, unknown>;
         return data.items;
       }
       return paginateAll(getToken(ctx), "/meetings", "items", qs);
@@ -231,15 +347,35 @@ export default function ciscoWebex(rl: RunlinePluginAPI) {
     inputSchema: {
       meetingId: { type: "string", required: true, description: "Meeting ID" },
       title: { type: "string", required: false, description: "New title" },
-      start: { type: "string", required: false, description: "New start time (ISO 8601)" },
-      end: { type: "string", required: false, description: "New end time (ISO 8601)" },
-      password: { type: "string", required: false, description: "New password" },
-      invitees: { type: "array", required: false, description: "Array of {email} objects" },
+      start: {
+        type: "string",
+        required: false,
+        description: "New start time (ISO 8601)",
+      },
+      end: {
+        type: "string",
+        required: false,
+        description: "New end time (ISO 8601)",
+      },
+      password: {
+        type: "string",
+        required: false,
+        description: "New password",
+      },
+      invitees: {
+        type: "array",
+        required: false,
+        description: "Array of {email} objects",
+      },
     },
     async execute(input, ctx) {
       const { meetingId, ...fields } = input as Record<string, unknown>;
       // API requires title, password, start, end — fetch current if not provided
-      const current = (await apiRequest(getToken(ctx), "GET", `/meetings/${meetingId}`)) as Record<string, unknown>;
+      const current = (await apiRequest(
+        getToken(ctx),
+        "GET",
+        `/meetings/${meetingId}`,
+      )) as Record<string, unknown>;
       const body: Record<string, unknown> = {
         title: fields.title ?? current.title,
         password: fields.password ?? current.password,

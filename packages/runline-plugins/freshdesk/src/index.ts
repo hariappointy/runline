@@ -1,8 +1,26 @@
 import type { RunlinePluginAPI } from "runline";
 
-const STATUS: Record<string, number> = { open: 2, pending: 3, resolved: 4, closed: 5 };
-const PRIORITY: Record<string, number> = { low: 1, medium: 2, high: 3, urgent: 4 };
-const SOURCE: Record<string, number> = { email: 1, portal: 2, phone: 3, chat: 7, mobihelp: 8, feedbackWidget: 9, outboundEmail: 10 };
+const STATUS: Record<string, number> = {
+  open: 2,
+  pending: 3,
+  resolved: 4,
+  closed: 5,
+};
+const PRIORITY: Record<string, number> = {
+  low: 1,
+  medium: 2,
+  high: 3,
+  urgent: 4,
+};
+const SOURCE: Record<string, number> = {
+  email: 1,
+  portal: 2,
+  phone: 3,
+  chat: 7,
+  mobihelp: 8,
+  feedbackWidget: 9,
+  outboundEmail: 10,
+};
 
 async function apiRequest(
   domain: string,
@@ -25,11 +43,17 @@ async function apiRequest(
       "Content-Type": "application/json",
     },
   };
-  if (body && Object.keys(body).length > 0 && method !== "GET" && method !== "DELETE") {
+  if (
+    body &&
+    Object.keys(body).length > 0 &&
+    method !== "GET" &&
+    method !== "DELETE"
+  ) {
     opts.body = JSON.stringify(body);
   }
   const res = await fetch(url.toString(), opts);
-  if (!res.ok) throw new Error(`Freshdesk API error ${res.status}: ${await res.text()}`);
+  if (!res.ok)
+    throw new Error(`Freshdesk API error ${res.status}: ${await res.text()}`);
   if (res.status === 204) return { success: true };
   return res.json();
 }
@@ -41,7 +65,13 @@ function getConn(ctx: { connection: { config: Record<string, unknown> } }) {
   };
 }
 
-function req(ctx: { connection: { config: Record<string, unknown> } }, method: string, endpoint: string, body?: Record<string, unknown>, qs?: Record<string, unknown>) {
+function req(
+  ctx: { connection: { config: Record<string, unknown> } },
+  method: string,
+  endpoint: string,
+  body?: Record<string, unknown>,
+  qs?: Record<string, unknown>,
+) {
   const { domain, apiKey } = getConn(ctx);
   return apiRequest(domain, apiKey, method, endpoint, body, qs);
 }
@@ -51,8 +81,19 @@ export default function freshdesk(rl: RunlinePluginAPI) {
   rl.setVersion("0.1.0");
 
   rl.setConnectionSchema({
-    domain: { type: "string", required: true, description: "Freshdesk subdomain (e.g. 'mycompany' for mycompany.freshdesk.com)", env: "FRESHDESK_DOMAIN" },
-    apiKey: { type: "string", required: true, description: "Freshdesk API key", env: "FRESHDESK_API_KEY" },
+    domain: {
+      type: "string",
+      required: true,
+      description:
+        "Freshdesk subdomain (e.g. 'mycompany' for mycompany.freshdesk.com)",
+      env: "FRESHDESK_DOMAIN",
+    },
+    apiKey: {
+      type: "string",
+      required: true,
+      description: "Freshdesk API key",
+      env: "FRESHDESK_API_KEY",
+    },
   });
 
   // ── Ticket ──────────────────────────────────────────
@@ -60,24 +101,77 @@ export default function freshdesk(rl: RunlinePluginAPI) {
   rl.registerAction("ticket.create", {
     description: "Create a ticket",
     inputSchema: {
-      email: { type: "string", required: false, description: "Requester email" },
-      requesterId: { type: "number", required: false, description: "Requester user ID" },
-      phone: { type: "string", required: false, description: "Requester phone" },
-      subject: { type: "string", required: false, description: "Ticket subject" },
-      description: { type: "string", required: false, description: "Ticket description (HTML)" },
-      status: { type: "string", required: true, description: "open, pending, resolved, closed" },
-      priority: { type: "string", required: true, description: "low, medium, high, urgent" },
-      source: { type: "string", required: false, description: "email, portal, phone, chat, feedbackWidget, mobihelp, outboundEmail" },
-      type: { type: "string", required: false, description: "Question, Incident, Problem, Feature Request, Refund" },
+      email: {
+        type: "string",
+        required: false,
+        description: "Requester email",
+      },
+      requesterId: {
+        type: "number",
+        required: false,
+        description: "Requester user ID",
+      },
+      phone: {
+        type: "string",
+        required: false,
+        description: "Requester phone",
+      },
+      subject: {
+        type: "string",
+        required: false,
+        description: "Ticket subject",
+      },
+      description: {
+        type: "string",
+        required: false,
+        description: "Ticket description (HTML)",
+      },
+      status: {
+        type: "string",
+        required: true,
+        description: "open, pending, resolved, closed",
+      },
+      priority: {
+        type: "string",
+        required: true,
+        description: "low, medium, high, urgent",
+      },
+      source: {
+        type: "string",
+        required: false,
+        description:
+          "email, portal, phone, chat, feedbackWidget, mobihelp, outboundEmail",
+      },
+      type: {
+        type: "string",
+        required: false,
+        description: "Question, Incident, Problem, Feature Request, Refund",
+      },
       responderId: { type: "number", required: false, description: "Agent ID" },
       groupId: { type: "number", required: false, description: "Group ID" },
       productId: { type: "number", required: false, description: "Product ID" },
       companyId: { type: "number", required: false, description: "Company ID" },
       tags: { type: "array", required: false, description: "Tags" },
-      ccEmails: { type: "array", required: false, description: "CC email addresses" },
-      dueBy: { type: "string", required: false, description: "Due date (ISO 8601)" },
-      frDueBy: { type: "string", required: false, description: "First response due date" },
-      customFields: { type: "object", required: false, description: "Custom fields as key-value pairs" },
+      ccEmails: {
+        type: "array",
+        required: false,
+        description: "CC email addresses",
+      },
+      dueBy: {
+        type: "string",
+        required: false,
+        description: "Due date (ISO 8601)",
+      },
+      frDueBy: {
+        type: "string",
+        required: false,
+        description: "First response due date",
+      },
+      customFields: {
+        type: "object",
+        required: false,
+        description: "Custom fields as key-value pairs",
+      },
     },
     async execute(input, ctx) {
       const i = input as Record<string, unknown>;
@@ -107,27 +201,73 @@ export default function freshdesk(rl: RunlinePluginAPI) {
 
   rl.registerAction("ticket.get", {
     description: "Get a ticket by ID",
-    inputSchema: { ticketId: { type: "string", required: true, description: "Ticket ID" } },
+    inputSchema: {
+      ticketId: { type: "string", required: true, description: "Ticket ID" },
+    },
     async execute(input, ctx) {
-      return req(ctx, "GET", `/tickets/${(input as { ticketId: string }).ticketId}`);
+      return req(
+        ctx,
+        "GET",
+        `/tickets/${(input as { ticketId: string }).ticketId}`,
+      );
     },
   });
 
   rl.registerAction("ticket.list", {
     description: "List tickets",
     inputSchema: {
-      limit: { type: "number", required: false, description: "Max results (default: 30)" },
-      requesterId: { type: "string", required: false, description: "Filter by requester ID" },
-      requesterEmail: { type: "string", required: false, description: "Filter by requester email" },
-      companyId: { type: "string", required: false, description: "Filter by company ID" },
-      updatedSince: { type: "string", required: false, description: "Filter by updated since (ISO 8601)" },
-      orderBy: { type: "string", required: false, description: "created_at, due_by, updated_at" },
-      orderType: { type: "string", required: false, description: "asc or desc" },
-      include: { type: "string", required: false, description: "Comma-separated: requester, company, stats, description" },
+      limit: {
+        type: "number",
+        required: false,
+        description: "Max results (default: 30)",
+      },
+      requesterId: {
+        type: "string",
+        required: false,
+        description: "Filter by requester ID",
+      },
+      requesterEmail: {
+        type: "string",
+        required: false,
+        description: "Filter by requester email",
+      },
+      companyId: {
+        type: "string",
+        required: false,
+        description: "Filter by company ID",
+      },
+      updatedSince: {
+        type: "string",
+        required: false,
+        description: "Filter by updated since (ISO 8601)",
+      },
+      orderBy: {
+        type: "string",
+        required: false,
+        description: "created_at, due_by, updated_at",
+      },
+      orderType: {
+        type: "string",
+        required: false,
+        description: "asc or desc",
+      },
+      include: {
+        type: "string",
+        required: false,
+        description: "Comma-separated: requester, company, stats, description",
+      },
     },
     async execute(input, ctx) {
-      const { limit, requesterId, requesterEmail, companyId, updatedSince, orderBy, orderType, include } =
-        (input ?? {}) as Record<string, unknown>;
+      const {
+        limit,
+        requesterId,
+        requesterEmail,
+        companyId,
+        updatedSince,
+        orderBy,
+        orderType,
+        include,
+      } = (input ?? {}) as Record<string, unknown>;
       const qs: Record<string, unknown> = {};
       if (limit) qs.per_page = limit;
       if (requesterId) qs.requester_id = requesterId;
@@ -145,8 +285,16 @@ export default function freshdesk(rl: RunlinePluginAPI) {
     description: "Update a ticket",
     inputSchema: {
       ticketId: { type: "string", required: true, description: "Ticket ID" },
-      status: { type: "string", required: false, description: "open, pending, resolved, closed" },
-      priority: { type: "string", required: false, description: "low, medium, high, urgent" },
+      status: {
+        type: "string",
+        required: false,
+        description: "open, pending, resolved, closed",
+      },
+      priority: {
+        type: "string",
+        required: false,
+        description: "low, medium, high, urgent",
+      },
       source: { type: "string", required: false, description: "Source" },
       type: { type: "string", required: false, description: "Ticket type" },
       responderId: { type: "number", required: false, description: "Agent ID" },
@@ -155,12 +303,33 @@ export default function freshdesk(rl: RunlinePluginAPI) {
       companyId: { type: "number", required: false, description: "Company ID" },
       tags: { type: "array", required: false, description: "Tags" },
       dueBy: { type: "string", required: false, description: "Due date" },
-      frDueBy: { type: "string", required: false, description: "First response due" },
-      customFields: { type: "object", required: false, description: "Custom fields" },
+      frDueBy: {
+        type: "string",
+        required: false,
+        description: "First response due",
+      },
+      customFields: {
+        type: "object",
+        required: false,
+        description: "Custom fields",
+      },
     },
     async execute(input, ctx) {
-      const { ticketId, status, priority, source, type, responderId, groupId, productId, companyId, tags, dueBy, frDueBy, customFields } =
-        input as Record<string, unknown>;
+      const {
+        ticketId,
+        status,
+        priority,
+        source,
+        type,
+        responderId,
+        groupId,
+        productId,
+        companyId,
+        tags,
+        dueBy,
+        frDueBy,
+        customFields,
+      } = input as Record<string, unknown>;
       const body: Record<string, unknown> = {};
       if (status) body.status = STATUS[status as string];
       if (priority) body.priority = PRIORITY[priority as string];
@@ -180,9 +349,15 @@ export default function freshdesk(rl: RunlinePluginAPI) {
 
   rl.registerAction("ticket.delete", {
     description: "Delete a ticket",
-    inputSchema: { ticketId: { type: "string", required: true, description: "Ticket ID" } },
+    inputSchema: {
+      ticketId: { type: "string", required: true, description: "Ticket ID" },
+    },
     async execute(input, ctx) {
-      await req(ctx, "DELETE", `/tickets/${(input as { ticketId: string }).ticketId}`);
+      await req(
+        ctx,
+        "DELETE",
+        `/tickets/${(input as { ticketId: string }).ticketId}`,
+      );
       return { success: true };
     },
   });
@@ -197,15 +372,33 @@ export default function freshdesk(rl: RunlinePluginAPI) {
       phone: { type: "string", required: false, description: "Phone number" },
       mobile: { type: "string", required: false, description: "Mobile number" },
       address: { type: "string", required: false, description: "Address" },
-      description: { type: "string", required: false, description: "Description" },
+      description: {
+        type: "string",
+        required: false,
+        description: "Description",
+      },
       jobTitle: { type: "string", required: false, description: "Job title" },
       tags: { type: "array", required: false, description: "Tags" },
       companyId: { type: "number", required: false, description: "Company ID" },
-      customFields: { type: "object", required: false, description: "Custom fields" },
+      customFields: {
+        type: "object",
+        required: false,
+        description: "Custom fields",
+      },
     },
     async execute(input, ctx) {
-      const { name, email, phone, mobile, address, description: desc, jobTitle, tags, companyId, customFields } =
-        input as Record<string, unknown>;
+      const {
+        name,
+        email,
+        phone,
+        mobile,
+        address,
+        description: desc,
+        jobTitle,
+        tags,
+        companyId,
+        customFields,
+      } = input as Record<string, unknown>;
       const body: Record<string, unknown> = { name };
       if (email) body.email = email;
       if (phone) body.phone = phone;
@@ -222,23 +415,50 @@ export default function freshdesk(rl: RunlinePluginAPI) {
 
   rl.registerAction("contact.get", {
     description: "Get a contact by ID",
-    inputSchema: { contactId: { type: "string", required: true, description: "Contact ID" } },
+    inputSchema: {
+      contactId: { type: "string", required: true, description: "Contact ID" },
+    },
     async execute(input, ctx) {
-      return req(ctx, "GET", `/contacts/${(input as { contactId: string }).contactId}`);
+      return req(
+        ctx,
+        "GET",
+        `/contacts/${(input as { contactId: string }).contactId}`,
+      );
     },
   });
 
   rl.registerAction("contact.list", {
     description: "List contacts",
     inputSchema: {
-      email: { type: "string", required: false, description: "Filter by email" },
-      phone: { type: "string", required: false, description: "Filter by phone" },
-      mobile: { type: "string", required: false, description: "Filter by mobile" },
-      companyId: { type: "string", required: false, description: "Filter by company ID" },
-      state: { type: "string", required: false, description: "verified, unverified, blocked, deleted" },
+      email: {
+        type: "string",
+        required: false,
+        description: "Filter by email",
+      },
+      phone: {
+        type: "string",
+        required: false,
+        description: "Filter by phone",
+      },
+      mobile: {
+        type: "string",
+        required: false,
+        description: "Filter by mobile",
+      },
+      companyId: {
+        type: "string",
+        required: false,
+        description: "Filter by company ID",
+      },
+      state: {
+        type: "string",
+        required: false,
+        description: "verified, unverified, blocked, deleted",
+      },
     },
     async execute(input, ctx) {
-      const { email, phone, mobile, companyId, state } = (input ?? {}) as Record<string, unknown>;
+      const { email, phone, mobile, companyId, state } = (input ??
+        {}) as Record<string, unknown>;
       const qs: Record<string, unknown> = {};
       if (email) qs.email = email;
       if (phone) qs.phone = phone;
@@ -260,11 +480,24 @@ export default function freshdesk(rl: RunlinePluginAPI) {
       address: { type: "string", required: false, description: "Address" },
       jobTitle: { type: "string", required: false, description: "Job title" },
       tags: { type: "array", required: false, description: "Tags" },
-      customFields: { type: "object", required: false, description: "Custom fields" },
+      customFields: {
+        type: "object",
+        required: false,
+        description: "Custom fields",
+      },
     },
     async execute(input, ctx) {
-      const { contactId, name, email, phone, mobile, address, jobTitle, tags, customFields } =
-        input as Record<string, unknown>;
+      const {
+        contactId,
+        name,
+        email,
+        phone,
+        mobile,
+        address,
+        jobTitle,
+        tags,
+        customFields,
+      } = input as Record<string, unknown>;
       const body: Record<string, unknown> = {};
       if (name) body.name = name;
       if (email) body.email = email;
@@ -280,9 +513,15 @@ export default function freshdesk(rl: RunlinePluginAPI) {
 
   rl.registerAction("contact.delete", {
     description: "Delete a contact",
-    inputSchema: { contactId: { type: "string", required: true, description: "Contact ID" } },
+    inputSchema: {
+      contactId: { type: "string", required: true, description: "Contact ID" },
+    },
     async execute(input, ctx) {
-      await req(ctx, "DELETE", `/contacts/${(input as { contactId: string }).contactId}`);
+      await req(
+        ctx,
+        "DELETE",
+        `/contacts/${(input as { contactId: string }).contactId}`,
+      );
       return { success: true };
     },
   });

@@ -7,7 +7,9 @@ function getConn(ctx: { connection: { config: Record<string, unknown> } }) {
 
 async function apiRequest(
   conn: { authId: string; authToken: string },
-  method: string, endpoint: string, body: Record<string, unknown>,
+  method: string,
+  endpoint: string,
+  body: Record<string, unknown>,
 ): Promise<unknown> {
   const url = `https://api.plivo.com/v1/Account/${conn.authId}${endpoint}/`;
   const res = await fetch(url, {
@@ -18,7 +20,8 @@ async function apiRequest(
     },
     body: JSON.stringify(body),
   });
-  if (!res.ok) throw new Error(`Plivo error ${res.status}: ${await res.text()}`);
+  if (!res.ok)
+    throw new Error(`Plivo error ${res.status}: ${await res.text()}`);
   return res.json();
 }
 
@@ -27,8 +30,18 @@ export default function plivo(rl: RunlinePluginAPI) {
   rl.setVersion("0.1.0");
 
   rl.setConnectionSchema({
-    authId: { type: "string", required: true, description: "Plivo Auth ID", env: "PLIVO_AUTH_ID" },
-    authToken: { type: "string", required: true, description: "Plivo Auth Token", env: "PLIVO_AUTH_TOKEN" },
+    authId: {
+      type: "string",
+      required: true,
+      description: "Plivo Auth ID",
+      env: "PLIVO_AUTH_ID",
+    },
+    authToken: {
+      type: "string",
+      required: true,
+      description: "Plivo Auth Token",
+      env: "PLIVO_AUTH_TOKEN",
+    },
   });
 
   rl.registerAction("sms.send", {
@@ -40,7 +53,11 @@ export default function plivo(rl: RunlinePluginAPI) {
     },
     async execute(input, ctx) {
       const { from, to, message } = input as Record<string, unknown>;
-      return apiRequest(getConn(ctx), "POST", "/Message", { src: from, dst: to, text: message });
+      return apiRequest(getConn(ctx), "POST", "/Message", {
+        src: from,
+        dst: to,
+        text: message,
+      });
     },
   });
 
@@ -50,11 +67,21 @@ export default function plivo(rl: RunlinePluginAPI) {
       from: { type: "string", required: true, description: "Sender number" },
       to: { type: "string", required: true, description: "Recipient number" },
       message: { type: "string", required: true },
-      mediaUrls: { type: "string", required: true, description: "Comma-separated media URLs" },
+      mediaUrls: {
+        type: "string",
+        required: true,
+        description: "Comma-separated media URLs",
+      },
     },
     async execute(input, ctx) {
       const { from, to, message, mediaUrls } = input as Record<string, unknown>;
-      return apiRequest(getConn(ctx), "POST", "/Message", { src: from, dst: to, text: message, type: "mms", media_urls: mediaUrls });
+      return apiRequest(getConn(ctx), "POST", "/Message", {
+        src: from,
+        dst: to,
+        text: message,
+        type: "mms",
+        media_urls: mediaUrls,
+      });
     },
   });
 
@@ -63,13 +90,27 @@ export default function plivo(rl: RunlinePluginAPI) {
     inputSchema: {
       from: { type: "string", required: true, description: "Caller number" },
       to: { type: "string", required: true, description: "Destination number" },
-      answerUrl: { type: "string", required: true, description: "URL for call answer XML" },
-      answerMethod: { type: "string", required: false, description: "HTTP method for answer URL (GET or POST, default POST)" },
+      answerUrl: {
+        type: "string",
+        required: true,
+        description: "URL for call answer XML",
+      },
+      answerMethod: {
+        type: "string",
+        required: false,
+        description: "HTTP method for answer URL (GET or POST, default POST)",
+      },
     },
     async execute(input, ctx) {
-      const { from, to, answerUrl, answerMethod } = input as Record<string, unknown>;
+      const { from, to, answerUrl, answerMethod } = input as Record<
+        string,
+        unknown
+      >;
       return apiRequest(getConn(ctx), "POST", "/Call", {
-        from, to, answer_url: answerUrl, answer_method: answerMethod ?? "POST",
+        from,
+        to,
+        answer_url: answerUrl,
+        answer_method: answerMethod ?? "POST",
       });
     },
   });

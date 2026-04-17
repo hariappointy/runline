@@ -2,23 +2,31 @@ import type { RunlinePluginAPI } from "runline";
 
 function getConn(ctx: { connection: { config: Record<string, unknown> } }) {
   const c = ctx.connection.config;
-  return { url: (c.url as string).replace(/\/$/, ""), apiKey: c.apiKey as string };
+  return {
+    url: (c.url as string).replace(/\/$/, ""),
+    apiKey: c.apiKey as string,
+  };
 }
 
 async function apiRequest(
-  conn: { url: string; apiKey: string }, endpoint: string, body: Record<string, unknown>,
+  conn: { url: string; apiKey: string },
+  endpoint: string,
+  body: Record<string, unknown>,
 ): Promise<string> {
   body.api_key = conn.apiKey;
   body.boolean = true;
   const formBody = Object.entries(body)
-    .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(String(v))}`)
+    .map(
+      ([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(String(v))}`,
+    )
     .join("&");
   const res = await fetch(`${conn.url}${endpoint}`, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: formBody,
   });
-  if (!res.ok) throw new Error(`Sendy error ${res.status}: ${await res.text()}`);
+  if (!res.ok)
+    throw new Error(`Sendy error ${res.status}: ${await res.text()}`);
   return res.text();
 }
 
@@ -27,8 +35,18 @@ export default function sendy(rl: RunlinePluginAPI) {
   rl.setVersion("0.1.0");
 
   rl.setConnectionSchema({
-    url: { type: "string", required: true, description: "Sendy installation URL", env: "SENDY_URL" },
-    apiKey: { type: "string", required: true, description: "Sendy API key", env: "SENDY_API_KEY" },
+    url: {
+      type: "string",
+      required: true,
+      description: "Sendy installation URL",
+      env: "SENDY_URL",
+    },
+    apiKey: {
+      type: "string",
+      required: true,
+      description: "Sendy API key",
+      env: "SENDY_API_KEY",
+    },
   });
 
   rl.registerAction("campaign.create", {
@@ -39,10 +57,26 @@ export default function sendy(rl: RunlinePluginAPI) {
       replyTo: { type: "string", required: true },
       title: { type: "string", required: true },
       subject: { type: "string", required: true },
-      htmlText: { type: "string", required: true, description: "HTML content of the email" },
-      sendCampaign: { type: "boolean", required: false, description: "Send immediately (default false)" },
-      brandId: { type: "string", required: false, description: "Brand ID (required if not sending)" },
-      listIds: { type: "string", required: false, description: "Comma-separated list IDs" },
+      htmlText: {
+        type: "string",
+        required: true,
+        description: "HTML content of the email",
+      },
+      sendCampaign: {
+        type: "boolean",
+        required: false,
+        description: "Send immediately (default false)",
+      },
+      brandId: {
+        type: "string",
+        required: false,
+        description: "Brand ID (required if not sending)",
+      },
+      listIds: {
+        type: "string",
+        required: false,
+        description: "Comma-separated list IDs",
+      },
       plainText: { type: "string", required: false },
       trackOpens: { type: "boolean", required: false },
       trackClicks: { type: "boolean", required: false },
@@ -50,16 +84,25 @@ export default function sendy(rl: RunlinePluginAPI) {
     async execute(input, ctx) {
       const p = input as Record<string, unknown>;
       const body: Record<string, unknown> = {
-        from_name: p.fromName, from_email: p.fromEmail, reply_to: p.replyTo,
-        title: p.title, subject: p.subject, html_text: p.htmlText,
+        from_name: p.fromName,
+        from_email: p.fromEmail,
+        reply_to: p.replyTo,
+        title: p.title,
+        subject: p.subject,
+        html_text: p.htmlText,
         send_campaign: p.sendCampaign ? 1 : 0,
       };
       if (p.brandId) body.brand_id = p.brandId;
       if (p.listIds) body.list_ids = p.listIds;
       if (p.plainText) body.plain_text = p.plainText;
       if (p.trackOpens !== undefined) body.track_opens = p.trackOpens ? 1 : 0;
-      if (p.trackClicks !== undefined) body.track_clicks = p.trackClicks ? 1 : 0;
-      const resp = await apiRequest(getConn(ctx), "/api/campaigns/create.php", body);
+      if (p.trackClicks !== undefined)
+        body.track_clicks = p.trackClicks ? 1 : 0;
+      const resp = await apiRequest(
+        getConn(ctx),
+        "/api/campaigns/create.php",
+        body,
+      );
       if (resp.includes("Campaign created")) return { message: resp };
       throw new Error(`Sendy campaign error: ${resp}`);
     },
@@ -87,7 +130,11 @@ export default function sendy(rl: RunlinePluginAPI) {
     inputSchema: { listId: { type: "string", required: true } },
     async execute(input, ctx) {
       const { listId } = input as Record<string, unknown>;
-      const resp = await apiRequest(getConn(ctx), "/api/subscribers/active-subscriber-count.php", { list_id: listId });
+      const resp = await apiRequest(
+        getConn(ctx),
+        "/api/subscribers/active-subscriber-count.php",
+        { list_id: listId },
+      );
       if (/^\d+$/.test(resp)) return { count: parseInt(resp, 10) };
       throw new Error(`Sendy count error: ${resp}`);
     },
@@ -101,7 +148,11 @@ export default function sendy(rl: RunlinePluginAPI) {
     },
     async execute(input, ctx) {
       const { email, listId } = input as Record<string, unknown>;
-      const resp = await apiRequest(getConn(ctx), "/api/subscribers/delete.php", { email, list_id: listId });
+      const resp = await apiRequest(
+        getConn(ctx),
+        "/api/subscribers/delete.php",
+        { email, list_id: listId },
+      );
       if (resp === "1") return { success: true };
       throw new Error(`Sendy delete error: ${resp}`);
     },
@@ -115,7 +166,10 @@ export default function sendy(rl: RunlinePluginAPI) {
     },
     async execute(input, ctx) {
       const { email, listId } = input as Record<string, unknown>;
-      const resp = await apiRequest(getConn(ctx), "/unsubscribe", { email, list: listId });
+      const resp = await apiRequest(getConn(ctx), "/unsubscribe", {
+        email,
+        list: listId,
+      });
       if (resp === "1") return { success: true };
       throw new Error(`Sendy unsubscribe error: ${resp}`);
     },
@@ -129,8 +183,19 @@ export default function sendy(rl: RunlinePluginAPI) {
     },
     async execute(input, ctx) {
       const { email, listId } = input as Record<string, unknown>;
-      const resp = await apiRequest(getConn(ctx), "/api/subscribers/subscription-status.php", { email, list_id: listId });
-      const valid = ["Subscribed", "Unsubscribed", "Unconfirmed", "Bounced", "Soft bounced", "Complained"];
+      const resp = await apiRequest(
+        getConn(ctx),
+        "/api/subscribers/subscription-status.php",
+        { email, list_id: listId },
+      );
+      const valid = [
+        "Subscribed",
+        "Unsubscribed",
+        "Unconfirmed",
+        "Bounced",
+        "Soft bounced",
+        "Complained",
+      ];
       if (valid.includes(resp)) return { status: resp };
       throw new Error(`Sendy status error: ${resp}`);
     },

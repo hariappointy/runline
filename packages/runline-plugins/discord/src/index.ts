@@ -22,11 +22,17 @@ async function apiRequest(
       "Content-Type": "application/json",
     },
   };
-  if (body && Object.keys(body).length > 0 && method !== "GET" && method !== "DELETE") {
+  if (
+    body &&
+    Object.keys(body).length > 0 &&
+    method !== "GET" &&
+    method !== "DELETE"
+  ) {
     opts.body = JSON.stringify(body);
   }
   const res = await fetch(url.toString(), opts);
-  if (!res.ok) throw new Error(`Discord API error ${res.status}: ${await res.text()}`);
+  if (!res.ok)
+    throw new Error(`Discord API error ${res.status}: ${await res.text()}`);
   if (res.status === 204) return { success: true };
   return res.json();
 }
@@ -43,8 +49,18 @@ export default function discord(rl: RunlinePluginAPI) {
   rl.setVersion("0.1.0");
 
   rl.setConnectionSchema({
-    botToken: { type: "string", required: true, description: "Discord bot token", env: "DISCORD_BOT_TOKEN" },
-    guildId: { type: "string", required: true, description: "Default guild (server) ID", env: "DISCORD_GUILD_ID" },
+    botToken: {
+      type: "string",
+      required: true,
+      description: "Discord bot token",
+      env: "DISCORD_BOT_TOKEN",
+    },
+    guildId: {
+      type: "string",
+      required: true,
+      description: "Default guild (server) ID",
+      env: "DISCORD_GUILD_ID",
+    },
   });
 
   // ── Channel ─────────────────────────────────────────
@@ -53,19 +69,56 @@ export default function discord(rl: RunlinePluginAPI) {
     description: "Create a channel in the guild",
     inputSchema: {
       name: { type: "string", required: true, description: "Channel name" },
-      type: { type: "number", required: false, description: "Type: 0=text (default), 2=voice, 4=category" },
-      topic: { type: "string", required: false, description: "Channel topic (0-1024 chars)" },
-      parentId: { type: "string", required: false, description: "Category ID to nest under" },
-      position: { type: "number", required: false, description: "Sorting position" },
+      type: {
+        type: "number",
+        required: false,
+        description: "Type: 0=text (default), 2=voice, 4=category",
+      },
+      topic: {
+        type: "string",
+        required: false,
+        description: "Channel topic (0-1024 chars)",
+      },
+      parentId: {
+        type: "string",
+        required: false,
+        description: "Category ID to nest under",
+      },
+      position: {
+        type: "number",
+        required: false,
+        description: "Sorting position",
+      },
       nsfw: { type: "boolean", required: false, description: "Mark as NSFW" },
-      bitrate: { type: "number", required: false, description: "Bitrate for voice channels (8000-96000)" },
-      userLimit: { type: "number", required: false, description: "User limit for voice channels (0=no limit)" },
-      rateLimitPerUser: { type: "number", required: false, description: "Slowmode seconds" },
+      bitrate: {
+        type: "number",
+        required: false,
+        description: "Bitrate for voice channels (8000-96000)",
+      },
+      userLimit: {
+        type: "number",
+        required: false,
+        description: "User limit for voice channels (0=no limit)",
+      },
+      rateLimitPerUser: {
+        type: "number",
+        required: false,
+        description: "Slowmode seconds",
+      },
     },
     async execute(input, ctx) {
       const { botToken, guildId } = getConn(ctx);
-      const { name, type, topic, parentId, position, nsfw, bitrate, userLimit, rateLimitPerUser } =
-        input as Record<string, unknown>;
+      const {
+        name,
+        type,
+        topic,
+        parentId,
+        position,
+        nsfw,
+        bitrate,
+        userLimit,
+        rateLimitPerUser,
+      } = input as Record<string, unknown>;
       const body: Record<string, unknown> = { name, type: type ?? 0 };
       if (topic) body.topic = topic;
       if (parentId) body.parent_id = parentId;
@@ -73,17 +126,24 @@ export default function discord(rl: RunlinePluginAPI) {
       if (nsfw !== undefined) body.nsfw = nsfw;
       if (bitrate !== undefined) body.bitrate = bitrate;
       if (userLimit !== undefined) body.user_limit = userLimit;
-      if (rateLimitPerUser !== undefined) body.rate_limit_per_user = rateLimitPerUser;
+      if (rateLimitPerUser !== undefined)
+        body.rate_limit_per_user = rateLimitPerUser;
       return apiRequest(botToken, "POST", `/guilds/${guildId}/channels`, body);
     },
   });
 
   rl.registerAction("channel.get", {
     description: "Get a channel by ID",
-    inputSchema: { channelId: { type: "string", required: true, description: "Channel ID" } },
+    inputSchema: {
+      channelId: { type: "string", required: true, description: "Channel ID" },
+    },
     async execute(input, ctx) {
       const { botToken } = getConn(ctx);
-      return apiRequest(botToken, "GET", `/channels/${(input as { channelId: string }).channelId}`);
+      return apiRequest(
+        botToken,
+        "GET",
+        `/channels/${(input as { channelId: string }).channelId}`,
+      );
     },
   });
 
@@ -91,14 +151,24 @@ export default function discord(rl: RunlinePluginAPI) {
     description: "List all channels in the guild",
     inputSchema: {
       limit: { type: "number", required: false, description: "Max results" },
-      filterType: { type: "array", required: false, description: "Filter by type numbers [0,2,4]" },
+      filterType: {
+        type: "array",
+        required: false,
+        description: "Filter by type numbers [0,2,4]",
+      },
     },
     async execute(input, ctx) {
       const { botToken, guildId } = getConn(ctx);
       const { limit, filterType } = (input ?? {}) as Record<string, unknown>;
-      let channels = (await apiRequest(botToken, "GET", `/guilds/${guildId}/channels`)) as Array<Record<string, unknown>>;
+      let channels = (await apiRequest(
+        botToken,
+        "GET",
+        `/guilds/${guildId}/channels`,
+      )) as Array<Record<string, unknown>>;
       if (filterType && Array.isArray(filterType) && filterType.length > 0) {
-        channels = channels.filter((c) => (filterType as number[]).includes(c.type as number));
+        channels = channels.filter((c) =>
+          (filterType as number[]).includes(c.type as number),
+        );
       }
       if (limit) channels = channels.slice(0, limit as number);
       return channels;
@@ -111,17 +181,46 @@ export default function discord(rl: RunlinePluginAPI) {
       channelId: { type: "string", required: true, description: "Channel ID" },
       name: { type: "string", required: false, description: "New name" },
       topic: { type: "string", required: false, description: "New topic" },
-      parentId: { type: "string", required: false, description: "New category ID" },
-      position: { type: "number", required: false, description: "New position" },
+      parentId: {
+        type: "string",
+        required: false,
+        description: "New category ID",
+      },
+      position: {
+        type: "number",
+        required: false,
+        description: "New position",
+      },
       nsfw: { type: "boolean", required: false, description: "NSFW flag" },
-      bitrate: { type: "number", required: false, description: "Bitrate (voice)" },
-      userLimit: { type: "number", required: false, description: "User limit (voice)" },
-      rateLimitPerUser: { type: "number", required: false, description: "Slowmode seconds" },
+      bitrate: {
+        type: "number",
+        required: false,
+        description: "Bitrate (voice)",
+      },
+      userLimit: {
+        type: "number",
+        required: false,
+        description: "User limit (voice)",
+      },
+      rateLimitPerUser: {
+        type: "number",
+        required: false,
+        description: "Slowmode seconds",
+      },
     },
     async execute(input, ctx) {
       const { botToken } = getConn(ctx);
-      const { channelId, name, topic, parentId, position, nsfw, bitrate, userLimit, rateLimitPerUser } =
-        input as Record<string, unknown>;
+      const {
+        channelId,
+        name,
+        topic,
+        parentId,
+        position,
+        nsfw,
+        bitrate,
+        userLimit,
+        rateLimitPerUser,
+      } = input as Record<string, unknown>;
       const body: Record<string, unknown> = {};
       if (name) body.name = name;
       if (topic !== undefined) body.topic = topic;
@@ -130,17 +229,24 @@ export default function discord(rl: RunlinePluginAPI) {
       if (nsfw !== undefined) body.nsfw = nsfw;
       if (bitrate !== undefined) body.bitrate = bitrate;
       if (userLimit !== undefined) body.user_limit = userLimit;
-      if (rateLimitPerUser !== undefined) body.rate_limit_per_user = rateLimitPerUser;
+      if (rateLimitPerUser !== undefined)
+        body.rate_limit_per_user = rateLimitPerUser;
       return apiRequest(botToken, "PATCH", `/channels/${channelId}`, body);
     },
   });
 
   rl.registerAction("channel.delete", {
     description: "Delete a channel",
-    inputSchema: { channelId: { type: "string", required: true, description: "Channel ID" } },
+    inputSchema: {
+      channelId: { type: "string", required: true, description: "Channel ID" },
+    },
     async execute(input, ctx) {
       const { botToken } = getConn(ctx);
-      return apiRequest(botToken, "DELETE", `/channels/${(input as { channelId: string }).channelId}`);
+      return apiRequest(
+        botToken,
+        "DELETE",
+        `/channels/${(input as { channelId: string }).channelId}`,
+      );
     },
   });
 
@@ -149,8 +255,16 @@ export default function discord(rl: RunlinePluginAPI) {
   rl.registerAction("member.list", {
     description: "List members in the guild",
     inputSchema: {
-      limit: { type: "number", required: false, description: "Max results (default: 100, max: 1000)" },
-      after: { type: "string", required: false, description: "Fetch members after this user ID (pagination)" },
+      limit: {
+        type: "number",
+        required: false,
+        description: "Max results (default: 100, max: 1000)",
+      },
+      after: {
+        type: "string",
+        required: false,
+        description: "Fetch members after this user ID (pagination)",
+      },
     },
     async execute(input, ctx) {
       const { botToken, guildId } = getConn(ctx);
@@ -158,7 +272,13 @@ export default function discord(rl: RunlinePluginAPI) {
       const qs: Record<string, unknown> = {};
       if (limit) qs.limit = limit;
       if (after) qs.after = after;
-      return apiRequest(botToken, "GET", `/guilds/${guildId}/members`, undefined, qs);
+      return apiRequest(
+        botToken,
+        "GET",
+        `/guilds/${guildId}/members`,
+        undefined,
+        qs,
+      );
     },
   });
 
@@ -171,7 +291,11 @@ export default function discord(rl: RunlinePluginAPI) {
     async execute(input, ctx) {
       const { botToken, guildId } = getConn(ctx);
       const { userId, roleId } = input as { userId: string; roleId: string };
-      await apiRequest(botToken, "PUT", `/guilds/${guildId}/members/${userId}/roles/${roleId}`);
+      await apiRequest(
+        botToken,
+        "PUT",
+        `/guilds/${guildId}/members/${userId}/roles/${roleId}`,
+      );
       return { success: true };
     },
   });
@@ -185,7 +309,11 @@ export default function discord(rl: RunlinePluginAPI) {
     async execute(input, ctx) {
       const { botToken, guildId } = getConn(ctx);
       const { userId, roleId } = input as { userId: string; roleId: string };
-      await apiRequest(botToken, "DELETE", `/guilds/${guildId}/members/${userId}/roles/${roleId}`);
+      await apiRequest(
+        botToken,
+        "DELETE",
+        `/guilds/${guildId}/members/${userId}/roles/${roleId}`,
+      );
       return { success: true };
     },
   });
@@ -196,19 +324,39 @@ export default function discord(rl: RunlinePluginAPI) {
     description: "Send a message to a channel",
     inputSchema: {
       channelId: { type: "string", required: true, description: "Channel ID" },
-      content: { type: "string", required: true, description: "Message content (up to 2000 chars)" },
+      content: {
+        type: "string",
+        required: true,
+        description: "Message content (up to 2000 chars)",
+      },
       tts: { type: "boolean", required: false, description: "Text-to-speech" },
-      replyTo: { type: "string", required: false, description: "Message ID to reply to" },
-      embeds: { type: "array", required: false, description: "Array of embed objects" },
+      replyTo: {
+        type: "string",
+        required: false,
+        description: "Message ID to reply to",
+      },
+      embeds: {
+        type: "array",
+        required: false,
+        description: "Array of embed objects",
+      },
     },
     async execute(input, ctx) {
       const { botToken } = getConn(ctx);
-      const { channelId, content, tts, replyTo, embeds } = input as Record<string, unknown>;
+      const { channelId, content, tts, replyTo, embeds } = input as Record<
+        string,
+        unknown
+      >;
       const body: Record<string, unknown> = { content };
       if (tts) body.tts = true;
       if (replyTo) body.message_reference = { message_id: replyTo };
       if (embeds) body.embeds = embeds;
-      return apiRequest(botToken, "POST", `/channels/${channelId}/messages`, body);
+      return apiRequest(
+        botToken,
+        "POST",
+        `/channels/${channelId}/messages`,
+        body,
+      );
     },
   });
 
@@ -220,8 +368,15 @@ export default function discord(rl: RunlinePluginAPI) {
     },
     async execute(input, ctx) {
       const { botToken } = getConn(ctx);
-      const { channelId, messageId } = input as { channelId: string; messageId: string };
-      return apiRequest(botToken, "GET", `/channels/${channelId}/messages/${messageId}`);
+      const { channelId, messageId } = input as {
+        channelId: string;
+        messageId: string;
+      };
+      return apiRequest(
+        botToken,
+        "GET",
+        `/channels/${channelId}/messages/${messageId}`,
+      );
     },
   });
 
@@ -229,20 +384,43 @@ export default function discord(rl: RunlinePluginAPI) {
     description: "List messages in a channel",
     inputSchema: {
       channelId: { type: "string", required: true, description: "Channel ID" },
-      limit: { type: "number", required: false, description: "Max results (default: 50, max: 100)" },
-      before: { type: "string", required: false, description: "Get messages before this ID" },
-      after: { type: "string", required: false, description: "Get messages after this ID" },
-      around: { type: "string", required: false, description: "Get messages around this ID" },
+      limit: {
+        type: "number",
+        required: false,
+        description: "Max results (default: 50, max: 100)",
+      },
+      before: {
+        type: "string",
+        required: false,
+        description: "Get messages before this ID",
+      },
+      after: {
+        type: "string",
+        required: false,
+        description: "Get messages after this ID",
+      },
+      around: {
+        type: "string",
+        required: false,
+        description: "Get messages around this ID",
+      },
     },
     async execute(input, ctx) {
       const { botToken } = getConn(ctx);
-      const { channelId, limit, before, after, around } = (input ?? {}) as Record<string, unknown>;
+      const { channelId, limit, before, after, around } = (input ??
+        {}) as Record<string, unknown>;
       const qs: Record<string, unknown> = {};
       if (limit) qs.limit = limit;
       if (before) qs.before = before;
       if (after) qs.after = after;
       if (around) qs.around = around;
-      return apiRequest(botToken, "GET", `/channels/${channelId}/messages`, undefined, qs);
+      return apiRequest(
+        botToken,
+        "GET",
+        `/channels/${channelId}/messages`,
+        undefined,
+        qs,
+      );
     },
   });
 
@@ -254,8 +432,15 @@ export default function discord(rl: RunlinePluginAPI) {
     },
     async execute(input, ctx) {
       const { botToken } = getConn(ctx);
-      const { channelId, messageId } = input as { channelId: string; messageId: string };
-      await apiRequest(botToken, "DELETE", `/channels/${channelId}/messages/${messageId}`);
+      const { channelId, messageId } = input as {
+        channelId: string;
+        messageId: string;
+      };
+      await apiRequest(
+        botToken,
+        "DELETE",
+        `/channels/${channelId}/messages/${messageId}`,
+      );
       return { success: true };
     },
   });
@@ -265,12 +450,24 @@ export default function discord(rl: RunlinePluginAPI) {
     inputSchema: {
       channelId: { type: "string", required: true, description: "Channel ID" },
       messageId: { type: "string", required: true, description: "Message ID" },
-      emoji: { type: "string", required: true, description: "Emoji to react with (Unicode or name:id for custom)" },
+      emoji: {
+        type: "string",
+        required: true,
+        description: "Emoji to react with (Unicode or name:id for custom)",
+      },
     },
     async execute(input, ctx) {
       const { botToken } = getConn(ctx);
-      const { channelId, messageId, emoji } = input as { channelId: string; messageId: string; emoji: string };
-      await apiRequest(botToken, "PUT", `/channels/${channelId}/messages/${messageId}/reactions/${encodeURIComponent(emoji)}/@me`);
+      const { channelId, messageId, emoji } = input as {
+        channelId: string;
+        messageId: string;
+        emoji: string;
+      };
+      await apiRequest(
+        botToken,
+        "PUT",
+        `/channels/${channelId}/messages/${messageId}/reactions/${encodeURIComponent(emoji)}/@me`,
+      );
       return { success: true };
     },
   });

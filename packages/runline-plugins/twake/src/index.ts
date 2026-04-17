@@ -4,7 +4,12 @@ export default function twake(rl: RunlinePluginAPI) {
   rl.setName("twake");
   rl.setVersion("0.1.0");
   rl.setConnectionSchema({
-    apiKey: { type: "string", required: true, description: "Twake workspace API key", env: "TWAKE_API_KEY" },
+    apiKey: {
+      type: "string",
+      required: true,
+      description: "Twake workspace API key",
+      env: "TWAKE_API_KEY",
+    },
   });
 
   rl.registerAction("message.send", {
@@ -27,12 +32,19 @@ export default function twake(rl: RunlinePluginAPI) {
           hidden_data: hiddenData,
         },
       };
-      const res = await fetch("https://plugins.twake.app/plugins/runline/actions/message/save", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${ctx.connection.config.apiKey}`, "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      if (!res.ok) throw new Error(`Twake error ${res.status}: ${await res.text()}`);
+      const res = await fetch(
+        "https://plugins.twake.app/plugins/runline/actions/message/save",
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${ctx.connection.config.apiKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(body),
+        },
+      );
+      if (!res.ok)
+        throw new Error(`Twake error ${res.status}: ${await res.text()}`);
       const data = (await res.json()) as Record<string, unknown>;
       return data.object;
     },

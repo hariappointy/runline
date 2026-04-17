@@ -28,12 +28,15 @@ async function apiRequest(
     opts.body = JSON.stringify(b);
   }
   const res = await fetch(url.toString(), opts);
-  if (!res.ok) throw new Error(`ConvertKit API error ${res.status}: ${await res.text()}`);
+  if (!res.ok)
+    throw new Error(`ConvertKit API error ${res.status}: ${await res.text()}`);
   if (res.status === 204) return { success: true };
   return res.json();
 }
 
-function getSecret(ctx: { connection: { config: Record<string, unknown> } }): string {
+function getSecret(ctx: {
+  connection: { config: Record<string, unknown> };
+}): string {
   return ctx.connection.config.apiSecret as string;
 }
 
@@ -65,17 +68,29 @@ export default function convertkit(rl: RunlinePluginAPI) {
 
   rl.registerAction("customField.get", {
     description: "Get a custom field",
-    inputSchema: { id: { type: "string", required: true, description: "Field ID" } },
+    inputSchema: {
+      id: { type: "string", required: true, description: "Field ID" },
+    },
     async execute(input, ctx) {
-      return apiRequest(getSecret(ctx), "GET", `/custom_fields/${(input as { id: string }).id}`);
+      return apiRequest(
+        getSecret(ctx),
+        "GET",
+        `/custom_fields/${(input as { id: string }).id}`,
+      );
     },
   });
 
   rl.registerAction("customField.list", {
     description: "List custom fields",
-    inputSchema: { limit: { type: "number", required: false, description: "Max results" } },
+    inputSchema: {
+      limit: { type: "number", required: false, description: "Max results" },
+    },
     async execute(input, ctx) {
-      const data = (await apiRequest(getSecret(ctx), "GET", "/custom_fields")) as Record<string, unknown>;
+      const data = (await apiRequest(
+        getSecret(ctx),
+        "GET",
+        "/custom_fields",
+      )) as Record<string, unknown>;
       const fields = (data.custom_fields as unknown[]) ?? [];
       const { limit } = (input ?? {}) as { limit?: number };
       if (limit) return fields.slice(0, limit);
@@ -91,16 +106,24 @@ export default function convertkit(rl: RunlinePluginAPI) {
     },
     async execute(input, ctx) {
       const { id, label } = input as { id: string; label: string };
-      await apiRequest(getSecret(ctx), "PUT", `/custom_fields/${id}`, { label });
+      await apiRequest(getSecret(ctx), "PUT", `/custom_fields/${id}`, {
+        label,
+      });
       return { success: true };
     },
   });
 
   rl.registerAction("customField.delete", {
     description: "Delete a custom field",
-    inputSchema: { id: { type: "string", required: true, description: "Field ID" } },
+    inputSchema: {
+      id: { type: "string", required: true, description: "Field ID" },
+    },
     async execute(input, ctx) {
-      return apiRequest(getSecret(ctx), "DELETE", `/custom_fields/${(input as { id: string }).id}`);
+      return apiRequest(
+        getSecret(ctx),
+        "DELETE",
+        `/custom_fields/${(input as { id: string }).id}`,
+      );
     },
   });
 
@@ -110,27 +133,49 @@ export default function convertkit(rl: RunlinePluginAPI) {
     description: "Add a subscriber to a form",
     inputSchema: {
       formId: { type: "string", required: true, description: "Form ID" },
-      email: { type: "string", required: true, description: "Subscriber email" },
+      email: {
+        type: "string",
+        required: true,
+        description: "Subscriber email",
+      },
       firstName: { type: "string", required: false, description: "First name" },
       tags: { type: "array", required: false, description: "Tag IDs to add" },
-      fields: { type: "object", required: false, description: "Custom field key-value pairs" },
+      fields: {
+        type: "object",
+        required: false,
+        description: "Custom field key-value pairs",
+      },
     },
     async execute(input, ctx) {
-      const { formId, email, firstName, tags, fields } = input as Record<string, unknown>;
+      const { formId, email, firstName, tags, fields } = input as Record<
+        string,
+        unknown
+      >;
       const body: Record<string, unknown> = { email };
       if (firstName) body.first_name = firstName;
       if (tags) body.tags = tags;
       if (fields) body.fields = fields;
-      const data = (await apiRequest(getSecret(ctx), "POST", `/forms/${formId}/subscribe`, body)) as Record<string, unknown>;
+      const data = (await apiRequest(
+        getSecret(ctx),
+        "POST",
+        `/forms/${formId}/subscribe`,
+        body,
+      )) as Record<string, unknown>;
       return data.subscription;
     },
   });
 
   rl.registerAction("form.list", {
     description: "List forms",
-    inputSchema: { limit: { type: "number", required: false, description: "Max results" } },
+    inputSchema: {
+      limit: { type: "number", required: false, description: "Max results" },
+    },
     async execute(input, ctx) {
-      const data = (await apiRequest(getSecret(ctx), "GET", "/forms")) as Record<string, unknown>;
+      const data = (await apiRequest(
+        getSecret(ctx),
+        "GET",
+        "/forms",
+      )) as Record<string, unknown>;
       const forms = (data.forms as unknown[]) ?? [];
       const { limit } = (input ?? {}) as { limit?: number };
       if (limit) return forms.slice(0, limit);
@@ -142,14 +187,27 @@ export default function convertkit(rl: RunlinePluginAPI) {
     description: "List subscriptions for a form",
     inputSchema: {
       formId: { type: "string", required: true, description: "Form ID" },
-      subscriberState: { type: "string", required: false, description: "Filter: active, cancelled" },
+      subscriberState: {
+        type: "string",
+        required: false,
+        description: "Filter: active, cancelled",
+      },
       limit: { type: "number", required: false, description: "Max results" },
     },
     async execute(input, ctx) {
-      const { formId, subscriberState, limit } = (input ?? {}) as Record<string, unknown>;
+      const { formId, subscriberState, limit } = (input ?? {}) as Record<
+        string,
+        unknown
+      >;
       const qs: Record<string, unknown> = {};
       if (subscriberState) qs.subscriber_state = subscriberState;
-      const data = (await apiRequest(getSecret(ctx), "GET", `/forms/${formId}/subscriptions`, undefined, qs)) as Record<string, unknown>;
+      const data = (await apiRequest(
+        getSecret(ctx),
+        "GET",
+        `/forms/${formId}/subscriptions`,
+        undefined,
+        qs,
+      )) as Record<string, unknown>;
       const subs = (data.subscriptions as unknown[]) ?? [];
       if (limit) return subs.slice(0, limit as number);
       return subs;
@@ -161,28 +219,50 @@ export default function convertkit(rl: RunlinePluginAPI) {
   rl.registerAction("sequence.addSubscriber", {
     description: "Add a subscriber to a sequence",
     inputSchema: {
-      sequenceId: { type: "string", required: true, description: "Sequence ID" },
-      email: { type: "string", required: true, description: "Subscriber email" },
+      sequenceId: {
+        type: "string",
+        required: true,
+        description: "Sequence ID",
+      },
+      email: {
+        type: "string",
+        required: true,
+        description: "Subscriber email",
+      },
       firstName: { type: "string", required: false, description: "First name" },
       tags: { type: "array", required: false, description: "Tag IDs" },
       fields: { type: "object", required: false, description: "Custom fields" },
     },
     async execute(input, ctx) {
-      const { sequenceId, email, firstName, tags, fields } = input as Record<string, unknown>;
+      const { sequenceId, email, firstName, tags, fields } = input as Record<
+        string,
+        unknown
+      >;
       const body: Record<string, unknown> = { email };
       if (firstName) body.first_name = firstName;
       if (tags) body.tags = tags;
       if (fields) body.fields = fields;
-      const data = (await apiRequest(getSecret(ctx), "POST", `/sequences/${sequenceId}/subscribe`, body)) as Record<string, unknown>;
+      const data = (await apiRequest(
+        getSecret(ctx),
+        "POST",
+        `/sequences/${sequenceId}/subscribe`,
+        body,
+      )) as Record<string, unknown>;
       return data.subscription;
     },
   });
 
   rl.registerAction("sequence.list", {
     description: "List sequences",
-    inputSchema: { limit: { type: "number", required: false, description: "Max results" } },
+    inputSchema: {
+      limit: { type: "number", required: false, description: "Max results" },
+    },
     async execute(input, ctx) {
-      const data = (await apiRequest(getSecret(ctx), "GET", "/sequences")) as Record<string, unknown>;
+      const data = (await apiRequest(
+        getSecret(ctx),
+        "GET",
+        "/sequences",
+      )) as Record<string, unknown>;
       const courses = (data.courses as unknown[]) ?? [];
       const { limit } = (input ?? {}) as { limit?: number };
       if (limit) return courses.slice(0, limit);
@@ -193,15 +273,32 @@ export default function convertkit(rl: RunlinePluginAPI) {
   rl.registerAction("sequence.getSubscriptions", {
     description: "List subscriptions for a sequence",
     inputSchema: {
-      sequenceId: { type: "string", required: true, description: "Sequence ID" },
-      subscriberState: { type: "string", required: false, description: "Filter: active, cancelled" },
+      sequenceId: {
+        type: "string",
+        required: true,
+        description: "Sequence ID",
+      },
+      subscriberState: {
+        type: "string",
+        required: false,
+        description: "Filter: active, cancelled",
+      },
       limit: { type: "number", required: false, description: "Max results" },
     },
     async execute(input, ctx) {
-      const { sequenceId, subscriberState, limit } = (input ?? {}) as Record<string, unknown>;
+      const { sequenceId, subscriberState, limit } = (input ?? {}) as Record<
+        string,
+        unknown
+      >;
       const qs: Record<string, unknown> = {};
       if (subscriberState) qs.subscriber_state = subscriberState;
-      const data = (await apiRequest(getSecret(ctx), "GET", `/sequences/${sequenceId}/subscriptions`, undefined, qs)) as Record<string, unknown>;
+      const data = (await apiRequest(
+        getSecret(ctx),
+        "GET",
+        `/sequences/${sequenceId}/subscriptions`,
+        undefined,
+        qs,
+      )) as Record<string, unknown>;
       const subs = (data.subscriptions as unknown[]) ?? [];
       if (limit) return subs.slice(0, limit as number);
       return subs;
@@ -213,7 +310,11 @@ export default function convertkit(rl: RunlinePluginAPI) {
   rl.registerAction("tag.create", {
     description: "Create one or more tags",
     inputSchema: {
-      names: { type: "string", required: true, description: "Comma-separated tag names" },
+      names: {
+        type: "string",
+        required: true,
+        description: "Comma-separated tag names",
+      },
     },
     async execute(input, ctx) {
       const { names } = input as { names: string };
@@ -224,9 +325,14 @@ export default function convertkit(rl: RunlinePluginAPI) {
 
   rl.registerAction("tag.list", {
     description: "List tags",
-    inputSchema: { limit: { type: "number", required: false, description: "Max results" } },
+    inputSchema: {
+      limit: { type: "number", required: false, description: "Max results" },
+    },
     async execute(input, ctx) {
-      const data = (await apiRequest(getSecret(ctx), "GET", "/tags")) as Record<string, unknown>;
+      const data = (await apiRequest(getSecret(ctx), "GET", "/tags")) as Record<
+        string,
+        unknown
+      >;
       const tags = (data.tags as unknown[]) ?? [];
       const { limit } = (input ?? {}) as { limit?: number };
       if (limit) return tags.slice(0, limit);
@@ -240,16 +346,28 @@ export default function convertkit(rl: RunlinePluginAPI) {
     description: "Tag a subscriber",
     inputSchema: {
       tagId: { type: "string", required: true, description: "Tag ID" },
-      email: { type: "string", required: true, description: "Subscriber email" },
+      email: {
+        type: "string",
+        required: true,
+        description: "Subscriber email",
+      },
       firstName: { type: "string", required: false, description: "First name" },
       fields: { type: "object", required: false, description: "Custom fields" },
     },
     async execute(input, ctx) {
-      const { tagId, email, firstName, fields } = input as Record<string, unknown>;
+      const { tagId, email, firstName, fields } = input as Record<
+        string,
+        unknown
+      >;
       const body: Record<string, unknown> = { email };
       if (firstName) body.first_name = firstName;
       if (fields) body.fields = fields;
-      const data = (await apiRequest(getSecret(ctx), "POST", `/tags/${tagId}/subscribe`, body)) as Record<string, unknown>;
+      const data = (await apiRequest(
+        getSecret(ctx),
+        "POST",
+        `/tags/${tagId}/subscribe`,
+        body,
+      )) as Record<string, unknown>;
       return data.subscription;
     },
   });
@@ -262,7 +380,11 @@ export default function convertkit(rl: RunlinePluginAPI) {
     },
     async execute(input, ctx) {
       const { tagId, limit } = input as { tagId: string; limit?: number };
-      const data = (await apiRequest(getSecret(ctx), "GET", `/tags/${tagId}/subscriptions`)) as Record<string, unknown>;
+      const data = (await apiRequest(
+        getSecret(ctx),
+        "GET",
+        `/tags/${tagId}/subscriptions`,
+      )) as Record<string, unknown>;
       const subs = (data.subscriptions as unknown[]) ?? [];
       if (limit) return subs.slice(0, limit);
       return subs;
@@ -273,11 +395,17 @@ export default function convertkit(rl: RunlinePluginAPI) {
     description: "Remove a tag from a subscriber",
     inputSchema: {
       tagId: { type: "string", required: true, description: "Tag ID" },
-      email: { type: "string", required: true, description: "Subscriber email" },
+      email: {
+        type: "string",
+        required: true,
+        description: "Subscriber email",
+      },
     },
     async execute(input, ctx) {
       const { tagId, email } = input as { tagId: string; email: string };
-      return apiRequest(getSecret(ctx), "POST", `/tags/${tagId}/unsubscribe`, { email });
+      return apiRequest(getSecret(ctx), "POST", `/tags/${tagId}/unsubscribe`, {
+        email,
+      });
     },
   });
 }

@@ -17,9 +17,17 @@ async function apiRequest(
   }
   const opts: RequestInit = {
     method,
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
   };
-  if (body && Object.keys(body).length > 0 && method !== "GET" && method !== "DELETE") {
+  if (
+    body &&
+    Object.keys(body).length > 0 &&
+    method !== "GET" &&
+    method !== "DELETE"
+  ) {
     opts.body = JSON.stringify(body);
   }
   const res = await fetch(url.toString(), opts);
@@ -30,7 +38,9 @@ async function apiRequest(
   return res.json();
 }
 
-function getToken(ctx: { connection: { config: Record<string, unknown> } }): string {
+function getToken(ctx: {
+  connection: { config: Record<string, unknown> };
+}): string {
   return ctx.connection.config.apiToken as string;
 }
 
@@ -51,11 +61,22 @@ export default function cloudflare(rl: RunlinePluginAPI) {
     description: "Get a zone-level origin certificate",
     inputSchema: {
       zoneId: { type: "string", required: true, description: "Zone ID" },
-      certificateId: { type: "string", required: true, description: "Certificate ID" },
+      certificateId: {
+        type: "string",
+        required: true,
+        description: "Certificate ID",
+      },
     },
     async execute(input, ctx) {
-      const { zoneId, certificateId } = input as { zoneId: string; certificateId: string };
-      const data = (await apiRequest(getToken(ctx), "GET", `/zones/${zoneId}/origin_tls_client_auth/${certificateId}`)) as Record<string, unknown>;
+      const { zoneId, certificateId } = input as {
+        zoneId: string;
+        certificateId: string;
+      };
+      const data = (await apiRequest(
+        getToken(ctx),
+        "GET",
+        `/zones/${zoneId}/origin_tls_client_auth/${certificateId}`,
+      )) as Record<string, unknown>;
       return data.result;
     },
   });
@@ -70,7 +91,13 @@ export default function cloudflare(rl: RunlinePluginAPI) {
       const { zoneId, limit } = input as { zoneId: string; limit?: number };
       const qs: Record<string, unknown> = {};
       if (limit) qs.per_page = limit;
-      const data = (await apiRequest(getToken(ctx), "GET", `/zones/${zoneId}/origin_tls_client_auth`, undefined, qs)) as Record<string, unknown>;
+      const data = (await apiRequest(
+        getToken(ctx),
+        "GET",
+        `/zones/${zoneId}/origin_tls_client_auth`,
+        undefined,
+        qs,
+      )) as Record<string, unknown>;
       return data.result;
     },
   });
@@ -79,15 +106,31 @@ export default function cloudflare(rl: RunlinePluginAPI) {
     description: "Upload a zone-level origin certificate",
     inputSchema: {
       zoneId: { type: "string", required: true, description: "Zone ID" },
-      certificate: { type: "string", required: true, description: "PEM certificate" },
-      privateKey: { type: "string", required: true, description: "PEM private key" },
+      certificate: {
+        type: "string",
+        required: true,
+        description: "PEM certificate",
+      },
+      privateKey: {
+        type: "string",
+        required: true,
+        description: "PEM private key",
+      },
     },
     async execute(input, ctx) {
-      const { zoneId, certificate, privateKey } = input as Record<string, string>;
-      const data = (await apiRequest(getToken(ctx), "POST", `/zones/${zoneId}/origin_tls_client_auth`, {
-        certificate,
-        private_key: privateKey,
-      })) as Record<string, unknown>;
+      const { zoneId, certificate, privateKey } = input as Record<
+        string,
+        string
+      >;
+      const data = (await apiRequest(
+        getToken(ctx),
+        "POST",
+        `/zones/${zoneId}/origin_tls_client_auth`,
+        {
+          certificate,
+          private_key: privateKey,
+        },
+      )) as Record<string, unknown>;
       return data.result;
     },
   });
@@ -96,11 +139,22 @@ export default function cloudflare(rl: RunlinePluginAPI) {
     description: "Delete a zone-level origin certificate",
     inputSchema: {
       zoneId: { type: "string", required: true, description: "Zone ID" },
-      certificateId: { type: "string", required: true, description: "Certificate ID" },
+      certificateId: {
+        type: "string",
+        required: true,
+        description: "Certificate ID",
+      },
     },
     async execute(input, ctx) {
-      const { zoneId, certificateId } = input as { zoneId: string; certificateId: string };
-      const data = (await apiRequest(getToken(ctx), "DELETE", `/zones/${zoneId}/origin_tls_client_auth/${certificateId}`)) as Record<string, unknown>;
+      const { zoneId, certificateId } = input as {
+        zoneId: string;
+        certificateId: string;
+      };
+      const data = (await apiRequest(
+        getToken(ctx),
+        "DELETE",
+        `/zones/${zoneId}/origin_tls_client_auth/${certificateId}`,
+      )) as Record<string, unknown>;
       return data.result;
     },
   });

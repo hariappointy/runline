@@ -46,10 +46,17 @@ async function paginate(
   const pageSize = 100;
 
   while (true) {
-    const data = (await apiRequest(appId, apiKey, "GET", `/collections/${collectionId}`, undefined, {
-      limit: pageSize,
-      offset,
-    })) as { records?: unknown[] };
+    const data = (await apiRequest(
+      appId,
+      apiKey,
+      "GET",
+      `/collections/${collectionId}`,
+      undefined,
+      {
+        limit: pageSize,
+        offset,
+      },
+    )) as { records?: unknown[] };
 
     const items = data.records ?? [];
     results.push(...items);
@@ -91,8 +98,16 @@ export default function adalo(rl: RunlinePluginAPI) {
   rl.registerAction("collection.create", {
     description: "Create a row in a collection",
     inputSchema: {
-      collectionId: { type: "string", required: true, description: "Collection ID" },
-      fields: { type: "object", required: true, description: "Field values as key-value pairs" },
+      collectionId: {
+        type: "string",
+        required: true,
+        description: "Collection ID",
+      },
+      fields: {
+        type: "object",
+        required: true,
+        description: "Field values as key-value pairs",
+      },
     },
     async execute(input, ctx) {
       const { collectionId, fields } = input as {
@@ -100,31 +115,60 @@ export default function adalo(rl: RunlinePluginAPI) {
         fields: Record<string, unknown>;
       };
       const { appId, apiKey } = getConn(ctx);
-      return apiRequest(appId, apiKey, "POST", `/collections/${collectionId}`, fields);
+      return apiRequest(
+        appId,
+        apiKey,
+        "POST",
+        `/collections/${collectionId}`,
+        fields,
+      );
     },
   });
 
   rl.registerAction("collection.get", {
     description: "Get a row from a collection",
     inputSchema: {
-      collectionId: { type: "string", required: true, description: "Collection ID" },
+      collectionId: {
+        type: "string",
+        required: true,
+        description: "Collection ID",
+      },
       rowId: { type: "string", required: true, description: "Row ID" },
     },
     async execute(input, ctx) {
-      const { collectionId, rowId } = input as { collectionId: string; rowId: string };
+      const { collectionId, rowId } = input as {
+        collectionId: string;
+        rowId: string;
+      };
       const { appId, apiKey } = getConn(ctx);
-      return apiRequest(appId, apiKey, "GET", `/collections/${collectionId}/${rowId}`);
+      return apiRequest(
+        appId,
+        apiKey,
+        "GET",
+        `/collections/${collectionId}/${rowId}`,
+      );
     },
   });
 
   rl.registerAction("collection.list", {
     description: "List rows from a collection",
     inputSchema: {
-      collectionId: { type: "string", required: true, description: "Collection ID" },
-      limit: { type: "number", required: false, description: "Max results to return" },
+      collectionId: {
+        type: "string",
+        required: true,
+        description: "Collection ID",
+      },
+      limit: {
+        type: "number",
+        required: false,
+        description: "Max results to return",
+      },
     },
     async execute(input, ctx) {
-      const { collectionId, limit } = input as { collectionId: string; limit?: number };
+      const { collectionId, limit } = input as {
+        collectionId: string;
+        limit?: number;
+      };
       const { appId, apiKey } = getConn(ctx);
       return paginate(appId, apiKey, collectionId, limit);
     },
@@ -133,9 +177,17 @@ export default function adalo(rl: RunlinePluginAPI) {
   rl.registerAction("collection.update", {
     description: "Update a row in a collection",
     inputSchema: {
-      collectionId: { type: "string", required: true, description: "Collection ID" },
+      collectionId: {
+        type: "string",
+        required: true,
+        description: "Collection ID",
+      },
       rowId: { type: "string", required: true, description: "Row ID" },
-      fields: { type: "object", required: true, description: "Field values to update" },
+      fields: {
+        type: "object",
+        required: true,
+        description: "Field values to update",
+      },
     },
     async execute(input, ctx) {
       const { collectionId, rowId, fields } = input as {
@@ -144,20 +196,38 @@ export default function adalo(rl: RunlinePluginAPI) {
         fields: Record<string, unknown>;
       };
       const { appId, apiKey } = getConn(ctx);
-      return apiRequest(appId, apiKey, "PUT", `/collections/${collectionId}/${rowId}`, fields);
+      return apiRequest(
+        appId,
+        apiKey,
+        "PUT",
+        `/collections/${collectionId}/${rowId}`,
+        fields,
+      );
     },
   });
 
   rl.registerAction("collection.delete", {
     description: "Delete a row from a collection",
     inputSchema: {
-      collectionId: { type: "string", required: true, description: "Collection ID" },
+      collectionId: {
+        type: "string",
+        required: true,
+        description: "Collection ID",
+      },
       rowId: { type: "string", required: true, description: "Row ID" },
     },
     async execute(input, ctx) {
-      const { collectionId, rowId } = input as { collectionId: string; rowId: string };
+      const { collectionId, rowId } = input as {
+        collectionId: string;
+        rowId: string;
+      };
       const { appId, apiKey } = getConn(ctx);
-      return apiRequest(appId, apiKey, "DELETE", `/collections/${collectionId}/${rowId}`);
+      return apiRequest(
+        appId,
+        apiKey,
+        "DELETE",
+        `/collections/${collectionId}/${rowId}`,
+      );
     },
   });
 }

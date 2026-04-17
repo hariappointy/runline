@@ -7,7 +7,9 @@ async function apiRequest(
   endpoint: string,
   params?: Record<string, unknown>,
 ): Promise<unknown> {
-  const baseUrl = isPro ? "https://api.deepl.com/v2" : "https://api-free.deepl.com/v2";
+  const baseUrl = isPro
+    ? "https://api.deepl.com/v2"
+    : "https://api-free.deepl.com/v2";
   const url = new URL(`${baseUrl}${endpoint}`);
 
   const opts: RequestInit = {
@@ -33,7 +35,8 @@ async function apiRequest(
   }
 
   const res = await fetch(url.toString(), opts);
-  if (!res.ok) throw new Error(`DeepL API error ${res.status}: ${await res.text()}`);
+  if (!res.ok)
+    throw new Error(`DeepL API error ${res.status}: ${await res.text()}`);
   return res.json();
 }
 
@@ -68,9 +71,22 @@ export default function deepl(rl: RunlinePluginAPI) {
   rl.registerAction("language.translate", {
     description: "Translate text to a target language",
     inputSchema: {
-      text: { type: "string", required: true, description: "Text to translate" },
-      targetLang: { type: "string", required: true, description: "Target language code (e.g. DE, FR, ES, EN-US, EN-GB, JA, ZH)" },
-      sourceLang: { type: "string", required: false, description: "Source language code (auto-detected if omitted)" },
+      text: {
+        type: "string",
+        required: true,
+        description: "Text to translate",
+      },
+      targetLang: {
+        type: "string",
+        required: true,
+        description:
+          "Target language code (e.g. DE, FR, ES, EN-US, EN-GB, JA, ZH)",
+      },
+      sourceLang: {
+        type: "string",
+        required: false,
+        description: "Source language code (auto-detected if omitted)",
+      },
     },
     async execute(input, ctx) {
       const { text, targetLang, sourceLang } = input as Record<string, unknown>;
@@ -80,9 +96,17 @@ export default function deepl(rl: RunlinePluginAPI) {
         target_lang: targetLang,
       };
       if (sourceLang) {
-        params.source_lang = ["EN-GB", "EN-US"].includes(sourceLang as string) ? "EN" : sourceLang;
+        params.source_lang = ["EN-GB", "EN-US"].includes(sourceLang as string)
+          ? "EN"
+          : sourceLang;
       }
-      const data = (await apiRequest(apiKey, isPro, "POST", "/translate", params)) as Record<string, unknown>;
+      const data = (await apiRequest(
+        apiKey,
+        isPro,
+        "POST",
+        "/translate",
+        params,
+      )) as Record<string, unknown>;
       const translations = data.translations as Array<Record<string, unknown>>;
       return translations?.[0] ?? data;
     },
@@ -91,7 +115,11 @@ export default function deepl(rl: RunlinePluginAPI) {
   rl.registerAction("language.list", {
     description: "List available target languages",
     inputSchema: {
-      type: { type: "string", required: false, description: "'source' or 'target' (default: target)" },
+      type: {
+        type: "string",
+        required: false,
+        description: "'source' or 'target' (default: target)",
+      },
     },
     async execute(input, ctx) {
       const { type = "target" } = (input ?? {}) as { type?: string };

@@ -1,6 +1,8 @@
 import type { RunlinePluginAPI } from "runline";
 
-interface Conn { config: Record<string, unknown> }
+interface Conn {
+  config: Record<string, unknown>;
+}
 
 function getConn(ctx: { connection: Conn }) {
   const c = ctx.connection.config;
@@ -30,7 +32,8 @@ async function apiRequest(
   };
   if (body !== undefined) init.body = JSON.stringify(body);
   const res = await fetch(url.toString(), init);
-  if (!res.ok) throw new Error(`NocoDB API error ${res.status}: ${await res.text()}`);
+  if (!res.ok)
+    throw new Error(`NocoDB API error ${res.status}: ${await res.text()}`);
   const text = await res.text();
   return text ? JSON.parse(text) : {};
 }
@@ -45,7 +48,13 @@ async function paginate(
   qs.offset = 0;
   let isLast = false;
   while (!isLast) {
-    const data = (await apiRequest(conn, "GET", endpoint, undefined, qs)) as Record<string, unknown>;
+    const data = (await apiRequest(
+      conn,
+      "GET",
+      endpoint,
+      undefined,
+      qs,
+    )) as Record<string, unknown>;
     const list = (data.list ?? []) as unknown[];
     all.push(...list);
     const pageInfo = data.pageInfo as Record<string, unknown> | undefined;
@@ -60,20 +69,39 @@ export default function nocodb(rl: RunlinePluginAPI) {
   rl.setVersion("0.1.0");
 
   rl.setConnectionSchema({
-    host: { type: "string", required: true, description: "NocoDB host URL (e.g. https://nocodb.example.com)", env: "NOCODB_HOST" },
-    apiToken: { type: "string", required: true, description: "NocoDB API token (xc-token)", env: "NOCODB_API_TOKEN" },
+    host: {
+      type: "string",
+      required: true,
+      description: "NocoDB host URL (e.g. https://nocodb.example.com)",
+      env: "NOCODB_HOST",
+    },
+    apiToken: {
+      type: "string",
+      required: true,
+      description: "NocoDB API token (xc-token)",
+      env: "NOCODB_API_TOKEN",
+    },
   });
 
   rl.registerAction("row.create", {
     description: "Create one or more rows in a NocoDB table (v2 API)",
     inputSchema: {
       tableId: { type: "string", required: true, description: "Table ID" },
-      rows: { type: "object", required: true, description: "Array of row objects to create" },
+      rows: {
+        type: "object",
+        required: true,
+        description: "Array of row objects to create",
+      },
     },
     async execute(input, ctx) {
       const { tableId, rows } = input as Record<string, unknown>;
       const conn = getConn(ctx);
-      return apiRequest(conn, "POST", `/api/v2/tables/${tableId}/records`, rows);
+      return apiRequest(
+        conn,
+        "POST",
+        `/api/v2/tables/${tableId}/records`,
+        rows,
+      );
     },
   });
 
@@ -85,7 +113,11 @@ export default function nocodb(rl: RunlinePluginAPI) {
     },
     async execute(input, ctx) {
       const { tableId, rowId } = input as Record<string, unknown>;
-      return apiRequest(getConn(ctx), "GET", `/api/v2/tables/${tableId}/records/${rowId}`);
+      return apiRequest(
+        getConn(ctx),
+        "GET",
+        `/api/v2/tables/${tableId}/records/${rowId}`,
+      );
     },
   });
 
@@ -93,12 +125,36 @@ export default function nocodb(rl: RunlinePluginAPI) {
     description: "List rows from a NocoDB table",
     inputSchema: {
       tableId: { type: "string", required: true, description: "Table ID" },
-      limit: { type: "number", required: false, description: "Max rows to return (default: all)" },
-      where: { type: "string", required: false, description: "Filter formula, e.g. (name,like,example%)" },
-      sort: { type: "string", required: false, description: "Sort string, e.g. -fieldName for desc" },
-      fields: { type: "string", required: false, description: "Comma-separated field names to return" },
-      viewId: { type: "string", required: false, description: "View ID to filter by" },
-      offset: { type: "number", required: false, description: "Offset for pagination" },
+      limit: {
+        type: "number",
+        required: false,
+        description: "Max rows to return (default: all)",
+      },
+      where: {
+        type: "string",
+        required: false,
+        description: "Filter formula, e.g. (name,like,example%)",
+      },
+      sort: {
+        type: "string",
+        required: false,
+        description: "Sort string, e.g. -fieldName for desc",
+      },
+      fields: {
+        type: "string",
+        required: false,
+        description: "Comma-separated field names to return",
+      },
+      viewId: {
+        type: "string",
+        required: false,
+        description: "View ID to filter by",
+      },
+      offset: {
+        type: "number",
+        required: false,
+        description: "Offset for pagination",
+      },
     },
     async execute(input, ctx) {
       const p = (input ?? {}) as Record<string, unknown>;
@@ -113,7 +169,13 @@ export default function nocodb(rl: RunlinePluginAPI) {
 
       if (p.limit) {
         qs.limit = p.limit;
-        const data = (await apiRequest(conn, "GET", endpoint, undefined, qs)) as Record<string, unknown>;
+        const data = (await apiRequest(
+          conn,
+          "GET",
+          endpoint,
+          undefined,
+          qs,
+        )) as Record<string, unknown>;
         return data.list;
       }
       return paginate(conn, endpoint, qs);
@@ -121,14 +183,24 @@ export default function nocodb(rl: RunlinePluginAPI) {
   });
 
   rl.registerAction("row.update", {
-    description: "Update one or more rows (include primary key in each row object)",
+    description:
+      "Update one or more rows (include primary key in each row object)",
     inputSchema: {
       tableId: { type: "string", required: true, description: "Table ID" },
-      rows: { type: "object", required: true, description: "Array of row objects with primary key included" },
+      rows: {
+        type: "object",
+        required: true,
+        description: "Array of row objects with primary key included",
+      },
     },
     async execute(input, ctx) {
       const { tableId, rows } = input as Record<string, unknown>;
-      return apiRequest(getConn(ctx), "PATCH", `/api/v2/tables/${tableId}/records`, rows);
+      return apiRequest(
+        getConn(ctx),
+        "PATCH",
+        `/api/v2/tables/${tableId}/records`,
+        rows,
+      );
     },
   });
 
@@ -136,11 +208,21 @@ export default function nocodb(rl: RunlinePluginAPI) {
     description: "Delete one or more rows by ID",
     inputSchema: {
       tableId: { type: "string", required: true, description: "Table ID" },
-      ids: { type: "object", required: true, description: "Array of objects with primary key, e.g. [{Id: 1}, {Id: 2}]" },
+      ids: {
+        type: "object",
+        required: true,
+        description:
+          "Array of objects with primary key, e.g. [{Id: 1}, {Id: 2}]",
+      },
     },
     async execute(input, ctx) {
       const { tableId, ids } = input as Record<string, unknown>;
-      return apiRequest(getConn(ctx), "DELETE", `/api/v2/tables/${tableId}/records`, ids);
+      return apiRequest(
+        getConn(ctx),
+        "DELETE",
+        `/api/v2/tables/${tableId}/records`,
+        ids,
+      );
     },
   });
 }

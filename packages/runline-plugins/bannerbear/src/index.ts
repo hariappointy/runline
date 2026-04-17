@@ -28,7 +28,9 @@ async function apiRequest(
   return res.json();
 }
 
-function getKey(ctx: { connection: { config: Record<string, unknown> } }): string {
+function getKey(ctx: {
+  connection: { config: Record<string, unknown> };
+}): string {
   return ctx.connection.config.apiKey as string;
 }
 
@@ -50,16 +52,48 @@ export default function bannerbear(rl: RunlinePluginAPI) {
   rl.registerAction("image.create", {
     description: "Create an image from a template",
     inputSchema: {
-      templateId: { type: "string", required: true, description: "Template UID" },
-      modifications: { type: "array", required: false, description: "Array of modification objects (name, text, color, image_url, etc.)" },
-      webhookUrl: { type: "string", required: false, description: "Webhook URL to notify on completion" },
-      metadata: { type: "string", required: false, description: "Custom metadata string" },
-      waitForImage: { type: "boolean", required: false, description: "Wait for image to finish processing (polls until complete)" },
-      maxTries: { type: "number", required: false, description: "Max poll attempts when waiting (default: 3)" },
+      templateId: {
+        type: "string",
+        required: true,
+        description: "Template UID",
+      },
+      modifications: {
+        type: "array",
+        required: false,
+        description:
+          "Array of modification objects (name, text, color, image_url, etc.)",
+      },
+      webhookUrl: {
+        type: "string",
+        required: false,
+        description: "Webhook URL to notify on completion",
+      },
+      metadata: {
+        type: "string",
+        required: false,
+        description: "Custom metadata string",
+      },
+      waitForImage: {
+        type: "boolean",
+        required: false,
+        description:
+          "Wait for image to finish processing (polls until complete)",
+      },
+      maxTries: {
+        type: "number",
+        required: false,
+        description: "Max poll attempts when waiting (default: 3)",
+      },
     },
     async execute(input, ctx) {
-      const { templateId, modifications, webhookUrl, metadata, waitForImage, maxTries = 3 } =
-        (input ?? {}) as Record<string, unknown>;
+      const {
+        templateId,
+        modifications,
+        webhookUrl,
+        metadata,
+        waitForImage,
+        maxTries = 3,
+      } = (input ?? {}) as Record<string, unknown>;
       const apiKey = getKey(ctx);
 
       const body: Record<string, unknown> = { template: templateId };
@@ -67,18 +101,29 @@ export default function bannerbear(rl: RunlinePluginAPI) {
       if (webhookUrl) body.webhook_url = webhookUrl;
       if (metadata) body.metadata = metadata;
 
-      let result = (await apiRequest(apiKey, "POST", "/images", body)) as Record<string, unknown>;
+      let result = (await apiRequest(
+        apiKey,
+        "POST",
+        "/images",
+        body,
+      )) as Record<string, unknown>;
 
       if (waitForImage && result.status !== "completed") {
         let tries = maxTries as number;
         while (tries > 0) {
           await new Promise((r) => setTimeout(r, 2000));
-          result = (await apiRequest(apiKey, "GET", `/images/${result.uid}`)) as Record<string, unknown>;
+          result = (await apiRequest(
+            apiKey,
+            "GET",
+            `/images/${result.uid}`,
+          )) as Record<string, unknown>;
           if (result.status === "completed") break;
           tries--;
         }
         if (result.status !== "completed") {
-          throw new Error("Image did not finish processing after multiple tries");
+          throw new Error(
+            "Image did not finish processing after multiple tries",
+          );
         }
       }
 
@@ -102,7 +147,11 @@ export default function bannerbear(rl: RunlinePluginAPI) {
   rl.registerAction("template.get", {
     description: "Get a template by ID",
     inputSchema: {
-      templateId: { type: "string", required: true, description: "Template UID" },
+      templateId: {
+        type: "string",
+        required: true,
+        description: "Template UID",
+      },
     },
     async execute(input, ctx) {
       const { templateId } = input as { templateId: string };

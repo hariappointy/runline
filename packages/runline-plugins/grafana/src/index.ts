@@ -16,13 +16,22 @@ async function apiRequest(
   }
   const opts: RequestInit = {
     method,
-    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
   };
-  if (body && Object.keys(body).length > 0 && method !== "GET" && method !== "DELETE") {
+  if (
+    body &&
+    Object.keys(body).length > 0 &&
+    method !== "GET" &&
+    method !== "DELETE"
+  ) {
     opts.body = JSON.stringify(body);
   }
   const res = await fetch(url.toString(), opts);
-  if (!res.ok) throw new Error(`Grafana API error ${res.status}: ${await res.text()}`);
+  if (!res.ok)
+    throw new Error(`Grafana API error ${res.status}: ${await res.text()}`);
   if (res.status === 204) return { success: true };
   return res.json();
 }
@@ -34,7 +43,13 @@ function getConn(ctx: { connection: { config: Record<string, unknown> } }) {
   };
 }
 
-function gf(ctx: { connection: { config: Record<string, unknown> } }, method: string, endpoint: string, body?: Record<string, unknown>, qs?: Record<string, unknown>) {
+function gf(
+  ctx: { connection: { config: Record<string, unknown> } },
+  method: string,
+  endpoint: string,
+  body?: Record<string, unknown>,
+  qs?: Record<string, unknown>,
+) {
   const { baseUrl, apiKey } = getConn(ctx);
   return apiRequest(baseUrl, apiKey, method, endpoint, body, qs);
 }
@@ -44,8 +59,18 @@ export default function grafana(rl: RunlinePluginAPI) {
   rl.setVersion("0.1.0");
 
   rl.setConnectionSchema({
-    baseUrl: { type: "string", required: true, description: "Grafana base URL (e.g. https://grafana.example.com)", env: "GRAFANA_URL" },
-    apiKey: { type: "string", required: true, description: "Grafana API key or service account token", env: "GRAFANA_API_KEY" },
+    baseUrl: {
+      type: "string",
+      required: true,
+      description: "Grafana base URL (e.g. https://grafana.example.com)",
+      env: "GRAFANA_URL",
+    },
+    apiKey: {
+      type: "string",
+      required: true,
+      description: "Grafana API key or service account token",
+      env: "GRAFANA_API_KEY",
+    },
   });
 
   // ── Dashboard ───────────────────────────────────────
@@ -53,13 +78,24 @@ export default function grafana(rl: RunlinePluginAPI) {
   rl.registerAction("dashboard.create", {
     description: "Create or save a dashboard",
     inputSchema: {
-      dashboard: { type: "object", required: true, description: "Dashboard JSON model" },
+      dashboard: {
+        type: "object",
+        required: true,
+        description: "Dashboard JSON model",
+      },
       folderId: { type: "number", required: false, description: "Folder ID" },
-      overwrite: { type: "boolean", required: false, description: "Overwrite existing" },
+      overwrite: {
+        type: "boolean",
+        required: false,
+        description: "Overwrite existing",
+      },
       message: { type: "string", required: false, description: "Save message" },
     },
     async execute(input, ctx) {
-      const { dashboard, folderId, overwrite, message } = input as Record<string, unknown>;
+      const { dashboard, folderId, overwrite, message } = input as Record<
+        string,
+        unknown
+      >;
       const body: Record<string, unknown> = { dashboard };
       if (folderId !== undefined) body.folderId = folderId;
       if (overwrite !== undefined) body.overwrite = overwrite;
@@ -70,9 +106,15 @@ export default function grafana(rl: RunlinePluginAPI) {
 
   rl.registerAction("dashboard.get", {
     description: "Get a dashboard by UID",
-    inputSchema: { uid: { type: "string", required: true, description: "Dashboard UID" } },
+    inputSchema: {
+      uid: { type: "string", required: true, description: "Dashboard UID" },
+    },
     async execute(input, ctx) {
-      return gf(ctx, "GET", `/dashboards/uid/${(input as { uid: string }).uid}`);
+      return gf(
+        ctx,
+        "GET",
+        `/dashboards/uid/${(input as { uid: string }).uid}`,
+      );
     },
   });
 
@@ -81,12 +123,23 @@ export default function grafana(rl: RunlinePluginAPI) {
     inputSchema: {
       query: { type: "string", required: false, description: "Search query" },
       tag: { type: "string", required: false, description: "Filter by tag" },
-      type: { type: "string", required: false, description: "dash-db or dash-folder" },
-      folderId: { type: "number", required: false, description: "Filter by folder ID" },
+      type: {
+        type: "string",
+        required: false,
+        description: "dash-db or dash-folder",
+      },
+      folderId: {
+        type: "number",
+        required: false,
+        description: "Filter by folder ID",
+      },
       limit: { type: "number", required: false, description: "Max results" },
     },
     async execute(input, ctx) {
-      const { query, tag, type, folderId, limit } = (input ?? {}) as Record<string, unknown>;
+      const { query, tag, type, folderId, limit } = (input ?? {}) as Record<
+        string,
+        unknown
+      >;
       const qs: Record<string, unknown> = {};
       if (query) qs.query = query;
       if (tag) qs.tag = tag;
@@ -99,23 +152,43 @@ export default function grafana(rl: RunlinePluginAPI) {
 
   rl.registerAction("dashboard.delete", {
     description: "Delete a dashboard by UID",
-    inputSchema: { uid: { type: "string", required: true, description: "Dashboard UID" } },
+    inputSchema: {
+      uid: { type: "string", required: true, description: "Dashboard UID" },
+    },
     async execute(input, ctx) {
-      return gf(ctx, "DELETE", `/dashboards/uid/${(input as { uid: string }).uid}`);
+      return gf(
+        ctx,
+        "DELETE",
+        `/dashboards/uid/${(input as { uid: string }).uid}`,
+      );
     },
   });
 
   rl.registerAction("dashboard.update", {
     description: "Update an existing dashboard",
     inputSchema: {
-      uid: { type: "string", required: true, description: "Dashboard UID to update" },
-      dashboard: { type: "object", required: true, description: "Updated dashboard JSON model" },
+      uid: {
+        type: "string",
+        required: true,
+        description: "Dashboard UID to update",
+      },
+      dashboard: {
+        type: "object",
+        required: true,
+        description: "Updated dashboard JSON model",
+      },
       folderId: { type: "number", required: false, description: "Folder ID" },
       message: { type: "string", required: false, description: "Save message" },
     },
     async execute(input, ctx) {
-      const { uid, dashboard, folderId, message } = input as Record<string, unknown>;
-      const body: Record<string, unknown> = { dashboard: { ...(dashboard as Record<string, unknown>), uid }, overwrite: true };
+      const { uid, dashboard, folderId, message } = input as Record<
+        string,
+        unknown
+      >;
+      const body: Record<string, unknown> = {
+        dashboard: { ...(dashboard as Record<string, unknown>), uid },
+        overwrite: true,
+      };
       if (folderId !== undefined) body.folderId = folderId;
       if (message) body.message = message;
       return gf(ctx, "POST", "/dashboards/db", body);
@@ -140,7 +213,9 @@ export default function grafana(rl: RunlinePluginAPI) {
 
   rl.registerAction("team.get", {
     description: "Get a team by ID",
-    inputSchema: { teamId: { type: "number", required: true, description: "Team ID" } },
+    inputSchema: {
+      teamId: { type: "number", required: true, description: "Team ID" },
+    },
     async execute(input, ctx) {
       return gf(ctx, "GET", `/teams/${(input as { teamId: number }).teamId}`);
     },
@@ -159,7 +234,13 @@ export default function grafana(rl: RunlinePluginAPI) {
       if (query) qs.query = query;
       if (limit) qs.perpage = limit;
       if (page) qs.page = page;
-      const data = (await gf(ctx, "GET", "/teams/search", undefined, qs)) as Record<string, unknown>;
+      const data = (await gf(
+        ctx,
+        "GET",
+        "/teams/search",
+        undefined,
+        qs,
+      )) as Record<string, unknown>;
       return data.teams;
     },
   });
@@ -182,9 +263,15 @@ export default function grafana(rl: RunlinePluginAPI) {
 
   rl.registerAction("team.delete", {
     description: "Delete a team",
-    inputSchema: { teamId: { type: "number", required: true, description: "Team ID" } },
+    inputSchema: {
+      teamId: { type: "number", required: true, description: "Team ID" },
+    },
     async execute(input, ctx) {
-      return gf(ctx, "DELETE", `/teams/${(input as { teamId: number }).teamId}`);
+      return gf(
+        ctx,
+        "DELETE",
+        `/teams/${(input as { teamId: number }).teamId}`,
+      );
     },
   });
 
@@ -206,7 +293,11 @@ export default function grafana(rl: RunlinePluginAPI) {
     description: "Remove a user from a team",
     inputSchema: {
       teamId: { type: "number", required: true, description: "Team ID" },
-      userId: { type: "number", required: true, description: "User ID to remove" },
+      userId: {
+        type: "number",
+        required: true,
+        description: "User ID to remove",
+      },
     },
     async execute(input, ctx) {
       const { teamId, userId } = input as { teamId: number; userId: number };
@@ -216,9 +307,15 @@ export default function grafana(rl: RunlinePluginAPI) {
 
   rl.registerAction("teamMember.list", {
     description: "List members of a team",
-    inputSchema: { teamId: { type: "number", required: true, description: "Team ID" } },
+    inputSchema: {
+      teamId: { type: "number", required: true, description: "Team ID" },
+    },
     async execute(input, ctx) {
-      return gf(ctx, "GET", `/teams/${(input as { teamId: number }).teamId}/members`);
+      return gf(
+        ctx,
+        "GET",
+        `/teams/${(input as { teamId: number }).teamId}/members`,
+      );
     },
   });
 
@@ -227,11 +324,22 @@ export default function grafana(rl: RunlinePluginAPI) {
   rl.registerAction("user.create", {
     description: "Add a user to the current organization",
     inputSchema: {
-      loginOrEmail: { type: "string", required: true, description: "Login name or email" },
-      role: { type: "string", required: true, description: "Viewer, Editor, or Admin" },
+      loginOrEmail: {
+        type: "string",
+        required: true,
+        description: "Login name or email",
+      },
+      role: {
+        type: "string",
+        required: true,
+        description: "Viewer, Editor, or Admin",
+      },
     },
     async execute(input, ctx) {
-      const { loginOrEmail, role } = input as { loginOrEmail: string; role: string };
+      const { loginOrEmail, role } = input as {
+        loginOrEmail: string;
+        role: string;
+      };
       return gf(ctx, "POST", "/org/users", { loginOrEmail, role });
     },
   });
@@ -247,7 +355,11 @@ export default function grafana(rl: RunlinePluginAPI) {
     description: "Update a user's role in the organization",
     inputSchema: {
       userId: { type: "number", required: true, description: "User ID" },
-      role: { type: "string", required: true, description: "Viewer, Editor, or Admin" },
+      role: {
+        type: "string",
+        required: true,
+        description: "Viewer, Editor, or Admin",
+      },
     },
     async execute(input, ctx) {
       const { userId, role } = input as { userId: number; role: string };
@@ -257,9 +369,15 @@ export default function grafana(rl: RunlinePluginAPI) {
 
   rl.registerAction("user.delete", {
     description: "Remove a user from the organization",
-    inputSchema: { userId: { type: "number", required: true, description: "User ID" } },
+    inputSchema: {
+      userId: { type: "number", required: true, description: "User ID" },
+    },
     async execute(input, ctx) {
-      return gf(ctx, "DELETE", `/org/users/${(input as { userId: number }).userId}`);
+      return gf(
+        ctx,
+        "DELETE",
+        `/org/users/${(input as { userId: number }).userId}`,
+      );
     },
   });
 }

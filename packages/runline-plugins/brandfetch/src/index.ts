@@ -2,7 +2,10 @@ import type { RunlinePluginAPI } from "runline";
 
 const BASE_URL = "https://api.brandfetch.io/v2";
 
-async function apiRequest(apiKey: string, domain: string): Promise<Record<string, unknown>> {
+async function apiRequest(
+  apiKey: string,
+  domain: string,
+): Promise<Record<string, unknown>> {
   const res = await fetch(`${BASE_URL}/brands/${domain}`, {
     headers: { Authorization: `Bearer ${apiKey}` },
   });
@@ -13,7 +16,9 @@ async function apiRequest(apiKey: string, domain: string): Promise<Record<string
   return res.json() as Promise<Record<string, unknown>>;
 }
 
-function getKey(ctx: { connection: { config: Record<string, unknown> } }): string {
+function getKey(ctx: {
+  connection: { config: Record<string, unknown> };
+}): string {
   return ctx.connection.config.apiKey as string;
 }
 
@@ -33,7 +38,11 @@ export default function brandfetch(rl: RunlinePluginAPI) {
   rl.registerAction("brand.getLogos", {
     description: "Get a company's logos and icons",
     inputSchema: {
-      domain: { type: "string", required: true, description: "Company domain (e.g. nike.com)" },
+      domain: {
+        type: "string",
+        required: true,
+        description: "Company domain (e.g. nike.com)",
+      },
     },
     async execute(input, ctx) {
       const { domain } = input as { domain: string };

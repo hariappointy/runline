@@ -7,14 +7,20 @@ export default function docker(rl: RunlinePluginAPI) {
 
   rl.onInit(() => {
     if (!commandExists("docker")) {
-      rl.log.warn("docker not found on PATH — docker actions will be unavailable");
+      rl.log.warn(
+        "docker not found on PATH — docker actions will be unavailable",
+      );
     }
   });
 
   rl.registerAction("containers.list", {
     description: "List Docker containers",
     inputSchema: {
-      all: { type: "boolean", description: "Include stopped containers", required: false },
+      all: {
+        type: "boolean",
+        description: "Include stopped containers",
+        required: false,
+      },
     },
     execute(input) {
       const opts = (input as { all?: boolean }) ?? {};
@@ -35,7 +41,11 @@ export default function docker(rl: RunlinePluginAPI) {
   rl.registerAction("containers.start", {
     description: "Start a Docker container",
     inputSchema: {
-      id: { type: "string", description: "Container ID or name", required: true },
+      id: {
+        type: "string",
+        description: "Container ID or name",
+        required: true,
+      },
     },
     execute(input) {
       const { id } = input as { id: string };
@@ -47,7 +57,11 @@ export default function docker(rl: RunlinePluginAPI) {
   rl.registerAction("containers.stop", {
     description: "Stop a Docker container",
     inputSchema: {
-      id: { type: "string", description: "Container ID or name", required: true },
+      id: {
+        type: "string",
+        description: "Container ID or name",
+        required: true,
+      },
     },
     execute(input) {
       const { id } = input as { id: string };
@@ -76,7 +90,11 @@ export default function docker(rl: RunlinePluginAPI) {
   rl.registerAction("images.pull", {
     description: "Pull a Docker image",
     inputSchema: {
-      image: { type: "string", description: "Image name (e.g. nginx:latest)", required: true },
+      image: {
+        type: "string",
+        description: "Image name (e.g. nginx:latest)",
+        required: true,
+      },
     },
     execute(input) {
       const { image } = input as { image: string };

@@ -23,7 +23,12 @@ async function apiRequest(
       Authorization: `Bearer ${token}`,
     },
   };
-  if (body && Object.keys(body).length > 0 && method !== "GET" && method !== "DELETE") {
+  if (
+    body &&
+    Object.keys(body).length > 0 &&
+    method !== "GET" &&
+    method !== "DELETE"
+  ) {
     opts.body = JSON.stringify({ data: body });
   }
 
@@ -59,7 +64,8 @@ async function paginateAll(
     const res = await fetch(url.toString(), {
       headers: { Authorization: `Bearer ${token}` },
     });
-    if (!res.ok) throw new Error(`Asana API error ${res.status}: ${await res.text()}`);
+    if (!res.ok)
+      throw new Error(`Asana API error ${res.status}: ${await res.text()}`);
     const json = (await res.json()) as Record<string, unknown>;
     const data = (json.data as unknown[]) ?? [];
     results.push(...data);
@@ -74,7 +80,9 @@ async function paginateAll(
   return results;
 }
 
-function getToken(ctx: { connection: { config: Record<string, unknown> } }): string {
+function getToken(ctx: {
+  connection: { config: Record<string, unknown> };
+}): string {
   return ctx.connection.config.token as string;
 }
 
@@ -97,16 +105,44 @@ export default function asana(rl: RunlinePluginAPI) {
     description: "Create a new task",
     inputSchema: {
       name: { type: "string", required: true, description: "Task name" },
-      workspace: { type: "string", required: true, description: "Workspace GID" },
-      assignee: { type: "string", required: false, description: "Assignee GID" },
-      projects: { type: "array", required: false, description: "Array of project GIDs" },
+      workspace: {
+        type: "string",
+        required: true,
+        description: "Workspace GID",
+      },
+      assignee: {
+        type: "string",
+        required: false,
+        description: "Assignee GID",
+      },
+      projects: {
+        type: "array",
+        required: false,
+        description: "Array of project GIDs",
+      },
       notes: { type: "string", required: false, description: "Task notes" },
-      dueOn: { type: "string", required: false, description: "Due date (YYYY-MM-DD)" },
-      completed: { type: "boolean", required: false, description: "Mark as completed" },
+      dueOn: {
+        type: "string",
+        required: false,
+        description: "Due date (YYYY-MM-DD)",
+      },
+      completed: {
+        type: "boolean",
+        required: false,
+        description: "Mark as completed",
+      },
     },
     async execute(input, ctx) {
-      const { name, workspace, assignee, projects, notes, dueOn, completed, ...rest } =
-        input as Record<string, unknown>;
+      const {
+        name,
+        workspace,
+        assignee,
+        projects,
+        notes,
+        dueOn,
+        completed,
+        ...rest
+      } = input as Record<string, unknown>;
       const body: Record<string, unknown> = { name, workspace, ...rest };
       if (assignee) body.assignee = assignee;
       if (projects) body.projects = projects;
@@ -129,22 +165,41 @@ export default function asana(rl: RunlinePluginAPI) {
   });
 
   rl.registerAction("task.list", {
-    description: "List tasks (requires project, section, or workspace+assignee filter)",
+    description:
+      "List tasks (requires project, section, or workspace+assignee filter)",
     inputSchema: {
       project: { type: "string", required: false, description: "Project GID" },
       section: { type: "string", required: false, description: "Section GID" },
-      workspace: { type: "string", required: false, description: "Workspace GID" },
-      assignee: { type: "string", required: false, description: "Assignee GID (required with workspace)" },
-      limit: { type: "number", required: false, description: "Max results to return" },
+      workspace: {
+        type: "string",
+        required: false,
+        description: "Workspace GID",
+      },
+      assignee: {
+        type: "string",
+        required: false,
+        description: "Assignee GID (required with workspace)",
+      },
+      limit: {
+        type: "number",
+        required: false,
+        description: "Max results to return",
+      },
     },
     async execute(input, ctx) {
-      const { project, section, workspace, assignee, limit } = (input ?? {}) as Record<string, unknown>;
+      const { project, section, workspace, assignee, limit } = (input ??
+        {}) as Record<string, unknown>;
       const qs: Record<string, unknown> = {};
       if (project) qs.project = project;
       if (section) qs.section = section;
       if (workspace) qs.workspace = workspace;
       if (assignee) qs.assignee = assignee;
-      return paginateAll(getToken(ctx), "/tasks", qs, limit as number | undefined);
+      return paginateAll(
+        getToken(ctx),
+        "/tasks",
+        qs,
+        limit as number | undefined,
+      );
     },
   });
 
@@ -154,9 +209,21 @@ export default function asana(rl: RunlinePluginAPI) {
       taskId: { type: "string", required: true, description: "Task GID" },
       name: { type: "string", required: false, description: "Task name" },
       notes: { type: "string", required: false, description: "Task notes" },
-      assignee: { type: "string", required: false, description: "Assignee GID" },
-      dueOn: { type: "string", required: false, description: "Due date (YYYY-MM-DD)" },
-      completed: { type: "boolean", required: false, description: "Mark as completed" },
+      assignee: {
+        type: "string",
+        required: false,
+        description: "Assignee GID",
+      },
+      dueOn: {
+        type: "string",
+        required: false,
+        description: "Due date (YYYY-MM-DD)",
+      },
+      completed: {
+        type: "boolean",
+        required: false,
+        description: "Mark as completed",
+      },
     },
     async execute(input, ctx) {
       const { taskId, dueOn, ...fields } = input as Record<string, unknown>;
@@ -182,11 +249,23 @@ export default function asana(rl: RunlinePluginAPI) {
     description: "Move a task to a section",
     inputSchema: {
       taskId: { type: "string", required: true, description: "Task GID" },
-      sectionId: { type: "string", required: true, description: "Section GID to move into" },
+      sectionId: {
+        type: "string",
+        required: true,
+        description: "Section GID to move into",
+      },
     },
     async execute(input, ctx) {
-      const { taskId, sectionId } = input as { taskId: string; sectionId: string };
-      await apiRequest(getToken(ctx), "POST", `/sections/${sectionId}/addTask`, { task: taskId });
+      const { taskId, sectionId } = input as {
+        taskId: string;
+        sectionId: string;
+      };
+      await apiRequest(
+        getToken(ctx),
+        "POST",
+        `/sections/${sectionId}/addTask`,
+        { task: taskId },
+      );
       return { success: true };
     },
   });
@@ -194,16 +273,34 @@ export default function asana(rl: RunlinePluginAPI) {
   rl.registerAction("task.search", {
     description: "Search for tasks in a workspace",
     inputSchema: {
-      workspace: { type: "string", required: true, description: "Workspace GID" },
-      text: { type: "string", required: false, description: "Text to search in name/notes" },
-      completed: { type: "boolean", required: false, description: "Filter by completed status" },
+      workspace: {
+        type: "string",
+        required: true,
+        description: "Workspace GID",
+      },
+      text: {
+        type: "string",
+        required: false,
+        description: "Text to search in name/notes",
+      },
+      completed: {
+        type: "boolean",
+        required: false,
+        description: "Filter by completed status",
+      },
     },
     async execute(input, ctx) {
       const { workspace, text, completed } = input as Record<string, unknown>;
       const qs: Record<string, unknown> = {};
       if (text) qs.text = text;
       if (completed !== undefined) qs.completed = completed;
-      return apiRequest(getToken(ctx), "GET", `/workspaces/${workspace}/tasks/search`, undefined, qs);
+      return apiRequest(
+        getToken(ctx),
+        "GET",
+        `/workspaces/${workspace}/tasks/search`,
+        undefined,
+        qs,
+      );
     },
   });
 
@@ -212,30 +309,63 @@ export default function asana(rl: RunlinePluginAPI) {
   rl.registerAction("subtask.create", {
     description: "Create a subtask on a task",
     inputSchema: {
-      taskId: { type: "string", required: true, description: "Parent task GID" },
+      taskId: {
+        type: "string",
+        required: true,
+        description: "Parent task GID",
+      },
       name: { type: "string", required: true, description: "Subtask name" },
-      assignee: { type: "string", required: false, description: "Assignee GID" },
+      assignee: {
+        type: "string",
+        required: false,
+        description: "Assignee GID",
+      },
       notes: { type: "string", required: false, description: "Subtask notes" },
-      dueOn: { type: "string", required: false, description: "Due date (YYYY-MM-DD)" },
-      completed: { type: "boolean", required: false, description: "Mark as completed" },
+      dueOn: {
+        type: "string",
+        required: false,
+        description: "Due date (YYYY-MM-DD)",
+      },
+      completed: {
+        type: "boolean",
+        required: false,
+        description: "Mark as completed",
+      },
     },
     async execute(input, ctx) {
       const { taskId, dueOn, ...fields } = input as Record<string, unknown>;
       const body: Record<string, unknown> = { ...fields };
       if (dueOn) body.due_on = dueOn;
-      return apiRequest(getToken(ctx), "POST", `/tasks/${taskId}/subtasks`, body);
+      return apiRequest(
+        getToken(ctx),
+        "POST",
+        `/tasks/${taskId}/subtasks`,
+        body,
+      );
     },
   });
 
   rl.registerAction("subtask.list", {
     description: "List subtasks of a task",
     inputSchema: {
-      taskId: { type: "string", required: true, description: "Parent task GID" },
-      limit: { type: "number", required: false, description: "Max results to return" },
+      taskId: {
+        type: "string",
+        required: true,
+        description: "Parent task GID",
+      },
+      limit: {
+        type: "number",
+        required: false,
+        description: "Max results to return",
+      },
     },
     async execute(input, ctx) {
       const { taskId, limit } = input as { taskId: string; limit?: number };
-      const data = (await apiRequest(getToken(ctx), "GET", `/tasks/${taskId}/subtasks`)) as unknown[];
+      const data = (await apiRequest(
+        getToken(ctx),
+        "GET",
+        `/tasks/${taskId}/subtasks`,
+      )) as unknown[];
       if (limit) return (data as unknown[]).slice(0, limit);
       return data;
     },
@@ -248,21 +378,43 @@ export default function asana(rl: RunlinePluginAPI) {
     inputSchema: {
       taskId: { type: "string", required: true, description: "Task GID" },
       text: { type: "string", required: true, description: "Comment text" },
-      isHtml: { type: "boolean", required: false, description: "Whether text is HTML" },
-      isPinned: { type: "boolean", required: false, description: "Pin the comment" },
+      isHtml: {
+        type: "boolean",
+        required: false,
+        description: "Whether text is HTML",
+      },
+      isPinned: {
+        type: "boolean",
+        required: false,
+        description: "Pin the comment",
+      },
     },
     async execute(input, ctx) {
-      const { taskId, text, isHtml, isPinned } = input as Record<string, unknown>;
-      const body: Record<string, unknown> = isHtml ? { html_text: text } : { text };
+      const { taskId, text, isHtml, isPinned } = input as Record<
+        string,
+        unknown
+      >;
+      const body: Record<string, unknown> = isHtml
+        ? { html_text: text }
+        : { text };
       if (isPinned) body.is_pinned = true;
-      return apiRequest(getToken(ctx), "POST", `/tasks/${taskId}/stories`, body);
+      return apiRequest(
+        getToken(ctx),
+        "POST",
+        `/tasks/${taskId}/stories`,
+        body,
+      );
     },
   });
 
   rl.registerAction("taskComment.remove", {
     description: "Remove a comment (story) from a task",
     inputSchema: {
-      commentId: { type: "string", required: true, description: "Comment/story GID" },
+      commentId: {
+        type: "string",
+        required: true,
+        description: "Comment/story GID",
+      },
     },
     async execute(input, ctx) {
       const { commentId } = input as { commentId: string };
@@ -281,7 +433,9 @@ export default function asana(rl: RunlinePluginAPI) {
     },
     async execute(input, ctx) {
       const { taskId, tagId } = input as { taskId: string; tagId: string };
-      await apiRequest(getToken(ctx), "POST", `/tasks/${taskId}/addTag`, { tag: tagId });
+      await apiRequest(getToken(ctx), "POST", `/tasks/${taskId}/addTag`, {
+        tag: tagId,
+      });
       return { success: true };
     },
   });
@@ -294,7 +448,9 @@ export default function asana(rl: RunlinePluginAPI) {
     },
     async execute(input, ctx) {
       const { taskId, tagId } = input as { taskId: string; tagId: string };
-      await apiRequest(getToken(ctx), "POST", `/tasks/${taskId}/removeTag`, { tag: tagId });
+      await apiRequest(getToken(ctx), "POST", `/tasks/${taskId}/removeTag`, {
+        tag: tagId,
+      });
       return { success: true };
     },
   });
@@ -306,13 +462,22 @@ export default function asana(rl: RunlinePluginAPI) {
     inputSchema: {
       taskId: { type: "string", required: true, description: "Task GID" },
       projectId: { type: "string", required: true, description: "Project GID" },
-      section: { type: "string", required: false, description: "Section GID to insert into" },
+      section: {
+        type: "string",
+        required: false,
+        description: "Section GID to insert into",
+      },
     },
     async execute(input, ctx) {
       const { taskId, projectId, section } = input as Record<string, unknown>;
       const body: Record<string, unknown> = { project: projectId };
       if (section) body.section = section;
-      await apiRequest(getToken(ctx), "POST", `/tasks/${taskId}/addProject`, body);
+      await apiRequest(
+        getToken(ctx),
+        "POST",
+        `/tasks/${taskId}/addProject`,
+        body,
+      );
       return { success: true };
     },
   });
@@ -324,8 +489,16 @@ export default function asana(rl: RunlinePluginAPI) {
       projectId: { type: "string", required: true, description: "Project GID" },
     },
     async execute(input, ctx) {
-      const { taskId, projectId } = input as { taskId: string; projectId: string };
-      await apiRequest(getToken(ctx), "POST", `/tasks/${taskId}/removeProject`, { project: projectId });
+      const { taskId, projectId } = input as {
+        taskId: string;
+        projectId: string;
+      };
+      await apiRequest(
+        getToken(ctx),
+        "POST",
+        `/tasks/${taskId}/removeProject`,
+        { project: projectId },
+      );
       return { success: true };
     },
   });
@@ -335,7 +508,11 @@ export default function asana(rl: RunlinePluginAPI) {
   rl.registerAction("user.get", {
     description: "Get a user by ID (or 'me' for current user)",
     inputSchema: {
-      userId: { type: "string", required: true, description: "User GID or 'me'" },
+      userId: {
+        type: "string",
+        required: true,
+        description: "User GID or 'me'",
+      },
     },
     async execute(input, ctx) {
       const { userId } = input as { userId: string };
@@ -346,7 +523,11 @@ export default function asana(rl: RunlinePluginAPI) {
   rl.registerAction("user.list", {
     description: "List users in a workspace",
     inputSchema: {
-      workspace: { type: "string", required: true, description: "Workspace GID" },
+      workspace: {
+        type: "string",
+        required: true,
+        description: "Workspace GID",
+      },
     },
     async execute(input, ctx) {
       const { workspace } = input as { workspace: string };
@@ -360,14 +541,29 @@ export default function asana(rl: RunlinePluginAPI) {
     description: "Create a new project",
     inputSchema: {
       name: { type: "string", required: true, description: "Project name" },
-      workspace: { type: "string", required: true, description: "Workspace GID" },
+      workspace: {
+        type: "string",
+        required: true,
+        description: "Workspace GID",
+      },
       team: { type: "string", required: true, description: "Team GID" },
-      notes: { type: "string", required: false, description: "Project description" },
+      notes: {
+        type: "string",
+        required: false,
+        description: "Project description",
+      },
       color: { type: "string", required: false, description: "Project color" },
-      dueOn: { type: "string", required: false, description: "Due date (YYYY-MM-DD)" },
+      dueOn: {
+        type: "string",
+        required: false,
+        description: "Due date (YYYY-MM-DD)",
+      },
     },
     async execute(input, ctx) {
-      const { name, workspace, team, notes, color, dueOn } = input as Record<string, unknown>;
+      const { name, workspace, team, notes, color, dueOn } = input as Record<
+        string,
+        unknown
+      >;
       const body: Record<string, unknown> = { name, workspace };
       if (notes) body.notes = notes;
       if (color) body.color = color;
@@ -390,13 +586,32 @@ export default function asana(rl: RunlinePluginAPI) {
   rl.registerAction("project.list", {
     description: "List projects in a workspace",
     inputSchema: {
-      workspace: { type: "string", required: true, description: "Workspace GID" },
-      team: { type: "string", required: false, description: "Filter by team GID" },
-      archived: { type: "boolean", required: false, description: "Filter by archived status" },
-      limit: { type: "number", required: false, description: "Max results to return" },
+      workspace: {
+        type: "string",
+        required: true,
+        description: "Workspace GID",
+      },
+      team: {
+        type: "string",
+        required: false,
+        description: "Filter by team GID",
+      },
+      archived: {
+        type: "boolean",
+        required: false,
+        description: "Filter by archived status",
+      },
+      limit: {
+        type: "number",
+        required: false,
+        description: "Max results to return",
+      },
     },
     async execute(input, ctx) {
-      const { workspace, team, archived, limit } = (input ?? {}) as Record<string, unknown>;
+      const { workspace, team, archived, limit } = (input ?? {}) as Record<
+        string,
+        unknown
+      >;
       const qs: Record<string, unknown> = {};
       if (team) {
         qs.team = team;
@@ -404,7 +619,12 @@ export default function asana(rl: RunlinePluginAPI) {
         qs.workspace = workspace;
       }
       if (archived !== undefined) qs.archived = archived;
-      return paginateAll(getToken(ctx), "/projects", qs, limit as number | undefined);
+      return paginateAll(
+        getToken(ctx),
+        "/projects",
+        qs,
+        limit as number | undefined,
+      );
     },
   });
 
@@ -413,10 +633,18 @@ export default function asana(rl: RunlinePluginAPI) {
     inputSchema: {
       projectId: { type: "string", required: true, description: "Project GID" },
       name: { type: "string", required: false, description: "Project name" },
-      notes: { type: "string", required: false, description: "Project description" },
+      notes: {
+        type: "string",
+        required: false,
+        description: "Project description",
+      },
       color: { type: "string", required: false, description: "Project color" },
       owner: { type: "string", required: false, description: "Owner GID" },
-      dueOn: { type: "string", required: false, description: "Due date (YYYY-MM-DD)" },
+      dueOn: {
+        type: "string",
+        required: false,
+        description: "Due date (YYYY-MM-DD)",
+      },
     },
     async execute(input, ctx) {
       const { projectId, dueOn, ...fields } = input as Record<string, unknown>;

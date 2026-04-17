@@ -56,31 +56,76 @@ export default function cockpit(rl: RunlinePluginAPI) {
   rl.registerAction("collection.create", {
     description: "Create an entry in a collection",
     inputSchema: {
-      collection: { type: "string", required: true, description: "Collection name" },
-      data: { type: "object", required: true, description: "Entry data as key-value pairs" },
+      collection: {
+        type: "string",
+        required: true,
+        description: "Collection name",
+      },
+      data: {
+        type: "object",
+        required: true,
+        description: "Entry data as key-value pairs",
+      },
     },
     async execute(input, ctx) {
-      const { collection, data } = input as { collection: string; data: Record<string, unknown> };
+      const { collection, data } = input as {
+        collection: string;
+        data: Record<string, unknown>;
+      };
       const { baseUrl, token } = getConn(ctx);
-      return apiRequest(baseUrl, token, "POST", `/collections/save/${collection}`, { data });
+      return apiRequest(
+        baseUrl,
+        token,
+        "POST",
+        `/collections/save/${collection}`,
+        { data },
+      );
     },
   });
 
   rl.registerAction("collection.list", {
     description: "List entries in a collection",
     inputSchema: {
-      collection: { type: "string", required: true, description: "Collection name" },
+      collection: {
+        type: "string",
+        required: true,
+        description: "Collection name",
+      },
       filter: { type: "object", required: false, description: "Filter object" },
-      fields: { type: "array", required: false, description: "Array of field names to return" },
-      sort: { type: "object", required: false, description: "Sort object (e.g. {fieldName: 1})" },
+      fields: {
+        type: "array",
+        required: false,
+        description: "Array of field names to return",
+      },
+      sort: {
+        type: "object",
+        required: false,
+        description: "Sort object (e.g. {fieldName: 1})",
+      },
       limit: { type: "number", required: false, description: "Max results" },
       skip: { type: "number", required: false, description: "Number to skip" },
-      populate: { type: "boolean", required: false, description: "Populate linked entries" },
-      language: { type: "string", required: false, description: "Language code" },
+      populate: {
+        type: "boolean",
+        required: false,
+        description: "Populate linked entries",
+      },
+      language: {
+        type: "string",
+        required: false,
+        description: "Language code",
+      },
     },
     async execute(input, ctx) {
-      const { collection, filter, fields, sort, limit, skip, populate, language } =
-        (input ?? {}) as Record<string, unknown>;
+      const {
+        collection,
+        filter,
+        fields,
+        sort,
+        limit,
+        skip,
+        populate,
+        language,
+      } = (input ?? {}) as Record<string, unknown>;
       const { baseUrl, token } = getConn(ctx);
       const body: Record<string, unknown> = { simple: true };
       if (filter) body.filter = filter;
@@ -94,14 +139,24 @@ export default function cockpit(rl: RunlinePluginAPI) {
       if (skip) body.skip = skip;
       if (populate) body.populate = populate;
       if (language) body.lang = language;
-      return apiRequest(baseUrl, token, "POST", `/collections/get/${collection}`, body);
+      return apiRequest(
+        baseUrl,
+        token,
+        "POST",
+        `/collections/get/${collection}`,
+        body,
+      );
     },
   });
 
   rl.registerAction("collection.update", {
     description: "Update an entry in a collection",
     inputSchema: {
-      collection: { type: "string", required: true, description: "Collection name" },
+      collection: {
+        type: "string",
+        required: true,
+        description: "Collection name",
+      },
       id: { type: "string", required: true, description: "Entry _id" },
       data: { type: "object", required: true, description: "Fields to update" },
     },
@@ -112,9 +167,15 @@ export default function cockpit(rl: RunlinePluginAPI) {
         data: Record<string, unknown>;
       };
       const { baseUrl, token } = getConn(ctx);
-      return apiRequest(baseUrl, token, "POST", `/collections/save/${collection}`, {
-        data: { _id: id, ...data },
-      });
+      return apiRequest(
+        baseUrl,
+        token,
+        "POST",
+        `/collections/save/${collection}`,
+        {
+          data: { _id: id, ...data },
+        },
+      );
     },
   });
 
@@ -124,12 +185,21 @@ export default function cockpit(rl: RunlinePluginAPI) {
     description: "Submit a form",
     inputSchema: {
       form: { type: "string", required: true, description: "Form name" },
-      data: { type: "object", required: true, description: "Form data as key-value pairs" },
+      data: {
+        type: "object",
+        required: true,
+        description: "Form data as key-value pairs",
+      },
     },
     async execute(input, ctx) {
-      const { form, data } = input as { form: string; data: Record<string, unknown> };
+      const { form, data } = input as {
+        form: string;
+        data: Record<string, unknown>;
+      };
       const { baseUrl, token } = getConn(ctx);
-      return apiRequest(baseUrl, token, "POST", `/forms/submit/${form}`, { form: data });
+      return apiRequest(baseUrl, token, "POST", `/forms/submit/${form}`, {
+        form: data,
+      });
     },
   });
 
@@ -138,7 +208,11 @@ export default function cockpit(rl: RunlinePluginAPI) {
   rl.registerAction("singleton.get", {
     description: "Get a singleton's data",
     inputSchema: {
-      singleton: { type: "string", required: true, description: "Singleton name" },
+      singleton: {
+        type: "string",
+        required: true,
+        description: "Singleton name",
+      },
     },
     async execute(input, ctx) {
       const { singleton } = input as { singleton: string };

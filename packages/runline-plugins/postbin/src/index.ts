@@ -2,11 +2,19 @@ import type { RunlinePluginAPI } from "runline";
 
 const BASE = "https://www.postb.in";
 
-async function apiRequest(method: string, path: string, body?: string): Promise<unknown> {
-  const init: RequestInit = { method, headers: { "Content-Type": "application/json" } };
+async function apiRequest(
+  method: string,
+  path: string,
+  body?: string,
+): Promise<unknown> {
+  const init: RequestInit = {
+    method,
+    headers: { "Content-Type": "application/json" },
+  };
   if (body !== undefined) init.body = body;
   const res = await fetch(`${BASE}${path}`, init);
-  if (!res.ok) throw new Error(`PostBin error ${res.status}: ${await res.text()}`);
+  if (!res.ok)
+    throw new Error(`PostBin error ${res.status}: ${await res.text()}`);
   const text = await res.text();
   return text ? JSON.parse(text) : {};
 }
@@ -40,7 +48,10 @@ export default function postbin(rl: RunlinePluginAPI) {
     description: "Create a new PostBin bin (no auth required)",
     inputSchema: {},
     async execute() {
-      const data = (await apiRequest("POST", "/api/bin")) as Record<string, unknown>;
+      const data = (await apiRequest("POST", "/api/bin")) as Record<
+        string,
+        unknown
+      >;
       return transformBin(data);
     },
   });
@@ -50,7 +61,10 @@ export default function postbin(rl: RunlinePluginAPI) {
     inputSchema: { binId: { type: "string", required: true } },
     async execute(input) {
       const id = parseBinId((input as Record<string, unknown>).binId as string);
-      const data = (await apiRequest("GET", `/api/bin/${id}`)) as Record<string, unknown>;
+      const data = (await apiRequest("GET", `/api/bin/${id}`)) as Record<
+        string,
+        unknown
+      >;
       return transformBin(data);
     },
   });
@@ -91,12 +105,20 @@ export default function postbin(rl: RunlinePluginAPI) {
     description: "Send a test request to a bin",
     inputSchema: {
       binId: { type: "string", required: true },
-      content: { type: "string", required: false, description: "Request body content" },
+      content: {
+        type: "string",
+        required: false,
+        description: "Request body content",
+      },
     },
     async execute(input) {
       const p = input as Record<string, unknown>;
       const id = parseBinId(p.binId as string);
-      const data = await apiRequest("POST", `/${id}`, p.content ? JSON.stringify({ content: p.content }) : undefined);
+      const data = await apiRequest(
+        "POST",
+        `/${id}`,
+        p.content ? JSON.stringify({ content: p.content }) : undefined,
+      );
       return { requestId: data };
     },
   });

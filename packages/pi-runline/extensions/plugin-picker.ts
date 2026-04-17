@@ -1,6 +1,6 @@
+import type { Theme } from "@mariozechner/pi-coding-agent";
 import type { Component, TUI } from "@mariozechner/pi-tui";
 import { fuzzyFilter, Input, visibleWidth } from "@mariozechner/pi-tui";
-import type { Theme } from "@mariozechner/pi-coding-agent";
 
 export interface PluginPickerItem {
   name: string;

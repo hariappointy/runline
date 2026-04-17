@@ -21,7 +21,12 @@ async function apiRequest(
     method,
     headers: { "Content-Type": "application/json" },
   };
-  if (body && Object.keys(body).length > 0 && method !== "GET" && method !== "DELETE") {
+  if (
+    body &&
+    Object.keys(body).length > 0 &&
+    method !== "GET" &&
+    method !== "DELETE"
+  ) {
     opts.body = JSON.stringify(body);
   }
 
@@ -43,7 +48,10 @@ async function paginateAll(
   const results: unknown[] = [];
   let page = 1;
   while (true) {
-    const data = (await apiRequest(token, "GET", endpoint, undefined, { ...qs, page })) as unknown[];
+    const data = (await apiRequest(token, "GET", endpoint, undefined, {
+      ...qs,
+      page,
+    })) as unknown[];
     if (!Array.isArray(data) || data.length === 0) break;
     results.push(...data);
     page++;
@@ -51,7 +59,9 @@ async function paginateAll(
   return results;
 }
 
-function getToken(ctx: { connection: { config: Record<string, unknown> } }): string {
+function getToken(ctx: {
+  connection: { config: Record<string, unknown> };
+}): string {
   return ctx.connection.config.apiToken as string;
 }
 
@@ -75,13 +85,26 @@ export default function beeminder(rl: RunlinePluginAPI) {
     inputSchema: {
       goalName: { type: "string", required: true, description: "Goal slug" },
       value: { type: "number", required: true, description: "Datapoint value" },
-      timestamp: { type: "number", required: false, description: "Unix timestamp (default: now)" },
+      timestamp: {
+        type: "number",
+        required: false,
+        description: "Unix timestamp (default: now)",
+      },
       comment: { type: "string", required: false, description: "Comment" },
-      requestid: { type: "string", required: false, description: "Unique ID to prevent duplicates" },
+      requestid: {
+        type: "string",
+        required: false,
+        description: "Unique ID to prevent duplicates",
+      },
     },
     async execute(input, ctx) {
       const { goalName, ...body } = input as Record<string, unknown>;
-      return apiRequest(getToken(ctx), "POST", `/users/me/goals/${goalName}/datapoints.json`, body);
+      return apiRequest(
+        getToken(ctx),
+        "POST",
+        `/users/me/goals/${goalName}/datapoints.json`,
+        body,
+      );
     },
   });
 
@@ -89,11 +112,23 @@ export default function beeminder(rl: RunlinePluginAPI) {
     description: "Create multiple datapoints at once",
     inputSchema: {
       goalName: { type: "string", required: true, description: "Goal slug" },
-      datapoints: { type: "array", required: true, description: "Array of {value, timestamp?, comment?, requestid?}" },
+      datapoints: {
+        type: "array",
+        required: true,
+        description: "Array of {value, timestamp?, comment?, requestid?}",
+      },
     },
     async execute(input, ctx) {
-      const { goalName, datapoints } = input as { goalName: string; datapoints: unknown[] };
-      return apiRequest(getToken(ctx), "POST", `/users/me/goals/${goalName}/datapoints/create_all.json`, { datapoints });
+      const { goalName, datapoints } = input as {
+        goalName: string;
+        datapoints: unknown[];
+      };
+      return apiRequest(
+        getToken(ctx),
+        "POST",
+        `/users/me/goals/${goalName}/datapoints/create_all.json`,
+        { datapoints },
+      );
     },
   });
 
@@ -101,11 +136,22 @@ export default function beeminder(rl: RunlinePluginAPI) {
     description: "Get a single datapoint",
     inputSchema: {
       goalName: { type: "string", required: true, description: "Goal slug" },
-      datapointId: { type: "string", required: true, description: "Datapoint ID" },
+      datapointId: {
+        type: "string",
+        required: true,
+        description: "Datapoint ID",
+      },
     },
     async execute(input, ctx) {
-      const { goalName, datapointId } = input as { goalName: string; datapointId: string };
-      return apiRequest(getToken(ctx), "GET", `/users/me/goals/${goalName}/datapoints/${datapointId}.json`);
+      const { goalName, datapointId } = input as {
+        goalName: string;
+        datapointId: string;
+      };
+      return apiRequest(
+        getToken(ctx),
+        "GET",
+        `/users/me/goals/${goalName}/datapoints/${datapointId}.json`,
+      );
     },
   });
 
@@ -113,13 +159,28 @@ export default function beeminder(rl: RunlinePluginAPI) {
     description: "List datapoints for a goal",
     inputSchema: {
       goalName: { type: "string", required: true, description: "Goal slug" },
-      sort: { type: "string", required: false, description: "Sort attribute (default: id)" },
-      limit: { type: "number", required: false, description: "Max results (omit for all)" },
-      page: { type: "number", required: false, description: "Page number (1-indexed)" },
+      sort: {
+        type: "string",
+        required: false,
+        description: "Sort attribute (default: id)",
+      },
+      limit: {
+        type: "number",
+        required: false,
+        description: "Max results (omit for all)",
+      },
+      page: {
+        type: "number",
+        required: false,
+        description: "Page number (1-indexed)",
+      },
       per: { type: "number", required: false, description: "Results per page" },
     },
     async execute(input, ctx) {
-      const { goalName, sort, limit, page, per } = (input ?? {}) as Record<string, unknown>;
+      const { goalName, sort, limit, page, per } = (input ?? {}) as Record<
+        string,
+        unknown
+      >;
       const token = getToken(ctx);
       const qs: Record<string, unknown> = {};
       if (sort) qs.sort = sort;
@@ -128,9 +189,19 @@ export default function beeminder(rl: RunlinePluginAPI) {
         qs.count = limit;
         if (page) qs.page = page;
         if (per) qs.per = per;
-        return apiRequest(token, "GET", `/users/me/goals/${goalName}/datapoints.json`, undefined, qs);
+        return apiRequest(
+          token,
+          "GET",
+          `/users/me/goals/${goalName}/datapoints.json`,
+          undefined,
+          qs,
+        );
       }
-      return paginateAll(token, `/users/me/goals/${goalName}/datapoints.json`, qs);
+      return paginateAll(
+        token,
+        `/users/me/goals/${goalName}/datapoints.json`,
+        qs,
+      );
     },
   });
 
@@ -138,14 +209,30 @@ export default function beeminder(rl: RunlinePluginAPI) {
     description: "Update a datapoint",
     inputSchema: {
       goalName: { type: "string", required: true, description: "Goal slug" },
-      datapointId: { type: "string", required: true, description: "Datapoint ID" },
+      datapointId: {
+        type: "string",
+        required: true,
+        description: "Datapoint ID",
+      },
       value: { type: "number", required: false, description: "New value" },
       comment: { type: "string", required: false, description: "New comment" },
-      timestamp: { type: "number", required: false, description: "New unix timestamp" },
+      timestamp: {
+        type: "number",
+        required: false,
+        description: "New unix timestamp",
+      },
     },
     async execute(input, ctx) {
-      const { goalName, datapointId, ...body } = input as Record<string, unknown>;
-      return apiRequest(getToken(ctx), "PUT", `/users/me/goals/${goalName}/datapoints/${datapointId}.json`, body);
+      const { goalName, datapointId, ...body } = input as Record<
+        string,
+        unknown
+      >;
+      return apiRequest(
+        getToken(ctx),
+        "PUT",
+        `/users/me/goals/${goalName}/datapoints/${datapointId}.json`,
+        body,
+      );
     },
   });
 
@@ -153,11 +240,22 @@ export default function beeminder(rl: RunlinePluginAPI) {
     description: "Delete a datapoint",
     inputSchema: {
       goalName: { type: "string", required: true, description: "Goal slug" },
-      datapointId: { type: "string", required: true, description: "Datapoint ID" },
+      datapointId: {
+        type: "string",
+        required: true,
+        description: "Datapoint ID",
+      },
     },
     async execute(input, ctx) {
-      const { goalName, datapointId } = input as { goalName: string; datapointId: string };
-      return apiRequest(getToken(ctx), "DELETE", `/users/me/goals/${goalName}/datapoints/${datapointId}.json`);
+      const { goalName, datapointId } = input as {
+        goalName: string;
+        datapointId: string;
+      };
+      return apiRequest(
+        getToken(ctx),
+        "DELETE",
+        `/users/me/goals/${goalName}/datapoints/${datapointId}.json`,
+      );
     },
   });
 
@@ -167,8 +265,16 @@ export default function beeminder(rl: RunlinePluginAPI) {
     description: "Create a charge (pay money to Beeminder)",
     inputSchema: {
       amount: { type: "number", required: true, description: "Amount in USD" },
-      note: { type: "string", required: false, description: "Charge explanation" },
-      dryrun: { type: "boolean", required: false, description: "Test without actually charging" },
+      note: {
+        type: "string",
+        required: false,
+        description: "Charge explanation",
+      },
+      dryrun: {
+        type: "boolean",
+        required: false,
+        description: "Test without actually charging",
+      },
     },
     async execute(input, ctx) {
       const { amount, note, dryrun } = input as Record<string, unknown>;
@@ -184,22 +290,72 @@ export default function beeminder(rl: RunlinePluginAPI) {
   rl.registerAction("goal.create", {
     description: "Create a new goal",
     inputSchema: {
-      slug: { type: "string", required: true, description: "Goal slug (unique identifier)" },
-      title: { type: "string", required: true, description: "Human-readable title" },
-      goal_type: { type: "string", required: true, description: "Goal type: hustler, biker, fatloser, gainer, inboxer, drinker, custom" },
-      gunits: { type: "string", required: true, description: "Units (e.g. hours, pages, pounds)" },
-      goaldate: { type: "number", required: false, description: "Target date (unix timestamp)" },
+      slug: {
+        type: "string",
+        required: true,
+        description: "Goal slug (unique identifier)",
+      },
+      title: {
+        type: "string",
+        required: true,
+        description: "Human-readable title",
+      },
+      goal_type: {
+        type: "string",
+        required: true,
+        description:
+          "Goal type: hustler, biker, fatloser, gainer, inboxer, drinker, custom",
+      },
+      gunits: {
+        type: "string",
+        required: true,
+        description: "Units (e.g. hours, pages, pounds)",
+      },
+      goaldate: {
+        type: "number",
+        required: false,
+        description: "Target date (unix timestamp)",
+      },
       goalval: { type: "number", required: false, description: "Target value" },
-      rate: { type: "number", required: false, description: "Rate (units per day)" },
-      initval: { type: "number", required: false, description: "Initial value (default: 0)" },
+      rate: {
+        type: "number",
+        required: false,
+        description: "Rate (units per day)",
+      },
+      initval: {
+        type: "number",
+        required: false,
+        description: "Initial value (default: 0)",
+      },
       secret: { type: "boolean", required: false, description: "Secret goal" },
-      datapublic: { type: "boolean", required: false, description: "Public data" },
-      datasource: { type: "string", required: false, description: "Data source: api, ifttt, zapier, manual" },
-      dryrun: { type: "boolean", required: false, description: "Test without creating" },
-      tags: { type: "array", required: false, description: "Array of tag strings" },
+      datapublic: {
+        type: "boolean",
+        required: false,
+        description: "Public data",
+      },
+      datasource: {
+        type: "string",
+        required: false,
+        description: "Data source: api, ifttt, zapier, manual",
+      },
+      dryrun: {
+        type: "boolean",
+        required: false,
+        description: "Test without creating",
+      },
+      tags: {
+        type: "array",
+        required: false,
+        description: "Array of tag strings",
+      },
     },
     async execute(input, ctx) {
-      return apiRequest(getToken(ctx), "POST", "/users/me/goals.json", input as Record<string, unknown>);
+      return apiRequest(
+        getToken(ctx),
+        "POST",
+        "/users/me/goals.json",
+        input as Record<string, unknown>,
+      );
     },
   });
 
@@ -207,34 +363,68 @@ export default function beeminder(rl: RunlinePluginAPI) {
     description: "Get a specific goal",
     inputSchema: {
       goalName: { type: "string", required: true, description: "Goal slug" },
-      datapoints: { type: "boolean", required: false, description: "Include datapoints" },
-      emaciated: { type: "boolean", required: false, description: "Strip road/roadall/fullroad attributes" },
+      datapoints: {
+        type: "boolean",
+        required: false,
+        description: "Include datapoints",
+      },
+      emaciated: {
+        type: "boolean",
+        required: false,
+        description: "Strip road/roadall/fullroad attributes",
+      },
     },
     async execute(input, ctx) {
       const { goalName, ...qs } = input as Record<string, unknown>;
-      return apiRequest(getToken(ctx), "GET", `/users/me/goals/${goalName}.json`, undefined, qs);
+      return apiRequest(
+        getToken(ctx),
+        "GET",
+        `/users/me/goals/${goalName}.json`,
+        undefined,
+        qs,
+      );
     },
   });
 
   rl.registerAction("goal.list", {
     description: "List all goals",
     inputSchema: {
-      emaciated: { type: "boolean", required: false, description: "Strip road attributes" },
+      emaciated: {
+        type: "boolean",
+        required: false,
+        description: "Strip road attributes",
+      },
     },
     async execute(input, ctx) {
       const qs = (input ?? {}) as Record<string, unknown>;
-      return apiRequest(getToken(ctx), "GET", "/users/me/goals.json", undefined, qs);
+      return apiRequest(
+        getToken(ctx),
+        "GET",
+        "/users/me/goals.json",
+        undefined,
+        qs,
+      );
     },
   });
 
   rl.registerAction("goal.listArchived", {
     description: "List archived goals",
     inputSchema: {
-      emaciated: { type: "boolean", required: false, description: "Strip road attributes" },
+      emaciated: {
+        type: "boolean",
+        required: false,
+        description: "Strip road attributes",
+      },
     },
     async execute(input, ctx) {
       const qs = (input ?? {}) as Record<string, unknown>;
-      return apiRequest(getToken(ctx), "GET", "/users/me/goals/archived.json", undefined, qs);
+      return apiRequest(
+        getToken(ctx),
+        "GET",
+        "/users/me/goals/archived.json",
+        undefined,
+        qs,
+      );
     },
   });
 
@@ -244,17 +434,46 @@ export default function beeminder(rl: RunlinePluginAPI) {
       goalName: { type: "string", required: true, description: "Goal slug" },
       title: { type: "string", required: false, description: "New title" },
       yaxis: { type: "string", required: false, description: "Y-axis label" },
-      tmin: { type: "string", required: false, description: "Min date (yyyy-mm-dd)" },
-      tmax: { type: "string", required: false, description: "Max date (yyyy-mm-dd)" },
+      tmin: {
+        type: "string",
+        required: false,
+        description: "Min date (yyyy-mm-dd)",
+      },
+      tmax: {
+        type: "string",
+        required: false,
+        description: "Max date (yyyy-mm-dd)",
+      },
       secret: { type: "boolean", required: false, description: "Secret goal" },
-      datapublic: { type: "boolean", required: false, description: "Public data" },
-      roadall: { type: "array", required: false, description: "Road matrix [[date, value, rate], ...]" },
-      datasource: { type: "string", required: false, description: "Data source" },
-      tags: { type: "array", required: false, description: "Array of tag strings" },
+      datapublic: {
+        type: "boolean",
+        required: false,
+        description: "Public data",
+      },
+      roadall: {
+        type: "array",
+        required: false,
+        description: "Road matrix [[date, value, rate], ...]",
+      },
+      datasource: {
+        type: "string",
+        required: false,
+        description: "Data source",
+      },
+      tags: {
+        type: "array",
+        required: false,
+        description: "Array of tag strings",
+      },
     },
     async execute(input, ctx) {
       const { goalName, ...body } = input as Record<string, unknown>;
-      return apiRequest(getToken(ctx), "PUT", `/users/me/goals/${goalName}.json`, body);
+      return apiRequest(
+        getToken(ctx),
+        "PUT",
+        `/users/me/goals/${goalName}.json`,
+        body,
+      );
     },
   });
 
@@ -265,7 +484,11 @@ export default function beeminder(rl: RunlinePluginAPI) {
     },
     async execute(input, ctx) {
       const { goalName } = input as { goalName: string };
-      return apiRequest(getToken(ctx), "GET", `/users/me/goals/${goalName}/refresh_graph.json`);
+      return apiRequest(
+        getToken(ctx),
+        "GET",
+        `/users/me/goals/${goalName}/refresh_graph.json`,
+      );
     },
   });
 
@@ -276,7 +499,11 @@ export default function beeminder(rl: RunlinePluginAPI) {
     },
     async execute(input, ctx) {
       const { goalName } = input as { goalName: string };
-      return apiRequest(getToken(ctx), "POST", `/users/me/goals/${goalName}/shortcircuit.json`);
+      return apiRequest(
+        getToken(ctx),
+        "POST",
+        `/users/me/goals/${goalName}/shortcircuit.json`,
+      );
     },
   });
 
@@ -287,7 +514,11 @@ export default function beeminder(rl: RunlinePluginAPI) {
     },
     async execute(input, ctx) {
       const { goalName } = input as { goalName: string };
-      return apiRequest(getToken(ctx), "POST", `/users/me/goals/${goalName}/stepdown.json`);
+      return apiRequest(
+        getToken(ctx),
+        "POST",
+        `/users/me/goals/${goalName}/stepdown.json`,
+      );
     },
   });
 
@@ -298,7 +529,11 @@ export default function beeminder(rl: RunlinePluginAPI) {
     },
     async execute(input, ctx) {
       const { goalName } = input as { goalName: string };
-      return apiRequest(getToken(ctx), "POST", `/users/me/goals/${goalName}/cancel_stepdown.json`);
+      return apiRequest(
+        getToken(ctx),
+        "POST",
+        `/users/me/goals/${goalName}/cancel_stepdown.json`,
+      );
     },
   });
 
@@ -309,7 +544,11 @@ export default function beeminder(rl: RunlinePluginAPI) {
     },
     async execute(input, ctx) {
       const { goalName } = input as { goalName: string };
-      return apiRequest(getToken(ctx), "POST", `/users/me/goals/${goalName}/uncleme.json`);
+      return apiRequest(
+        getToken(ctx),
+        "POST",
+        `/users/me/goals/${goalName}/uncleme.json`,
+      );
     },
   });
 
@@ -318,11 +557,32 @@ export default function beeminder(rl: RunlinePluginAPI) {
   rl.registerAction("user.get", {
     description: "Get current user information",
     inputSchema: {
-      associations: { type: "boolean", required: false, description: "Include associations" },
-      diff_since: { type: "number", required: false, description: "Unix timestamp — only return goals/datapoints changed since" },
-      skinny: { type: "boolean", required: false, description: "Minimal user data" },
-      emaciated: { type: "boolean", required: false, description: "Strip road attributes from goals" },
-      datapoints_count: { type: "number", required: false, description: "Number of datapoints to include" },
+      associations: {
+        type: "boolean",
+        required: false,
+        description: "Include associations",
+      },
+      diff_since: {
+        type: "number",
+        required: false,
+        description:
+          "Unix timestamp — only return goals/datapoints changed since",
+      },
+      skinny: {
+        type: "boolean",
+        required: false,
+        description: "Minimal user data",
+      },
+      emaciated: {
+        type: "boolean",
+        required: false,
+        description: "Strip road attributes from goals",
+      },
+      datapoints_count: {
+        type: "number",
+        required: false,
+        description: "Number of datapoints to include",
+      },
     },
     async execute(input, ctx) {
       const qs = (input ?? {}) as Record<string, unknown>;

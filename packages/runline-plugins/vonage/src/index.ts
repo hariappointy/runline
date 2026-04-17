@@ -4,18 +4,44 @@ export default function vonage(rl: RunlinePluginAPI) {
   rl.setName("vonage");
   rl.setVersion("0.1.0");
   rl.setConnectionSchema({
-    apiKey: { type: "string", required: true, description: "Vonage API key", env: "VONAGE_API_KEY" },
-    apiSecret: { type: "string", required: true, description: "Vonage API secret", env: "VONAGE_API_SECRET" },
+    apiKey: {
+      type: "string",
+      required: true,
+      description: "Vonage API key",
+      env: "VONAGE_API_KEY",
+    },
+    apiSecret: {
+      type: "string",
+      required: true,
+      description: "Vonage API secret",
+      env: "VONAGE_API_SECRET",
+    },
   });
 
   rl.registerAction("sms.send", {
     description: "Send an SMS",
     inputSchema: {
-      from: { type: "string", required: true, description: "Sender name or number" },
-      to: { type: "string", required: true, description: "Recipient number in E.164 format" },
+      from: {
+        type: "string",
+        required: true,
+        description: "Sender name or number",
+      },
+      to: {
+        type: "string",
+        required: true,
+        description: "Recipient number in E.164 format",
+      },
       text: { type: "string", required: true, description: "Message text" },
-      ttl: { type: "number", required: false, description: "Time-to-live in minutes (default 4320 = 72h)" },
-      callback: { type: "string", required: false, description: "Webhook URL for delivery receipt" },
+      ttl: {
+        type: "number",
+        required: false,
+        description: "Time-to-live in minutes (default 4320 = 72h)",
+      },
+      callback: {
+        type: "string",
+        required: false,
+        description: "Webhook URL for delivery receipt",
+      },
     },
     async execute(input, ctx) {
       const c = ctx.connection.config;
@@ -34,7 +60,8 @@ export default function vonage(rl: RunlinePluginAPI) {
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
         body: form,
       });
-      if (!res.ok) throw new Error(`Vonage error ${res.status}: ${await res.text()}`);
+      if (!res.ok)
+        throw new Error(`Vonage error ${res.status}: ${await res.text()}`);
       const data = (await res.json()) as Record<string, unknown>;
       return data.messages;
     },

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { Runline } from "../sdk.js";
 import type { RunlinePluginAPI } from "../plugin/api.js";
+import { Runline } from "../sdk.js";
 
 function mathPlugin(api: RunlinePluginAPI) {
   api.setName("math");

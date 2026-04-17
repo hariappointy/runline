@@ -2,7 +2,9 @@ import type { RunlinePluginAPI } from "runline";
 
 const BASE = "https://api.netlify.com/api/v1";
 
-interface Conn { config: Record<string, unknown> }
+interface Conn {
+  config: Record<string, unknown>;
+}
 
 function getToken(ctx: { connection: Conn }): string {
   return ctx.connection.config.accessToken as string;
@@ -30,7 +32,8 @@ async function apiRequest(
   };
   if (body && Object.keys(body).length > 0) init.body = JSON.stringify(body);
   const res = await fetch(url.toString(), init);
-  if (!res.ok) throw new Error(`Netlify API error ${res.status}: ${await res.text()}`);
+  if (!res.ok)
+    throw new Error(`Netlify API error ${res.status}: ${await res.text()}`);
   const text = await res.text();
   return text ? JSON.parse(text) : {};
 }
@@ -54,7 +57,8 @@ async function paginate(
     const res = await fetch(url.toString(), {
       headers: { Authorization: `Bearer ${token}` },
     });
-    if (!res.ok) throw new Error(`Netlify API error ${res.status}: ${await res.text()}`);
+    if (!res.ok)
+      throw new Error(`Netlify API error ${res.status}: ${await res.text()}`);
     const items = (await res.json()) as unknown[];
     all.push(...items);
     const link = res.headers.get("link") ?? "";
@@ -69,7 +73,12 @@ export default function netlify(rl: RunlinePluginAPI) {
   rl.setVersion("0.1.0");
 
   rl.setConnectionSchema({
-    accessToken: { type: "string", required: true, description: "Netlify personal access token", env: "NETLIFY_ACCESS_TOKEN" },
+    accessToken: {
+      type: "string",
+      required: true,
+      description: "Netlify personal access token",
+      env: "NETLIFY_ACCESS_TOKEN",
+    },
   });
 
   // ── Deploy ──────────────────────────────────────────
@@ -89,7 +98,11 @@ export default function netlify(rl: RunlinePluginAPI) {
     description: "Create a new deployment for a site",
     inputSchema: {
       siteId: { type: "string", required: true, description: "Site ID" },
-      branch: { type: "string", required: false, description: "Branch to deploy" },
+      branch: {
+        type: "string",
+        required: false,
+        description: "Branch to deploy",
+      },
       title: { type: "string", required: false, description: "Deploy title" },
     },
     async execute(input, ctx) {
@@ -98,7 +111,13 @@ export default function netlify(rl: RunlinePluginAPI) {
       const qs: Record<string, unknown> = {};
       if (branch) body.branch = branch;
       if (title) qs.title = title;
-      return apiRequest(getToken(ctx), "POST", `/sites/${siteId}/deploys`, body, qs);
+      return apiRequest(
+        getToken(ctx),
+        "POST",
+        `/sites/${siteId}/deploys`,
+        body,
+        qs,
+      );
     },
   });
 
@@ -110,7 +129,11 @@ export default function netlify(rl: RunlinePluginAPI) {
     },
     async execute(input, ctx) {
       const { siteId, deployId } = input as Record<string, unknown>;
-      return apiRequest(getToken(ctx), "GET", `/sites/${siteId}/deploys/${deployId}`);
+      return apiRequest(
+        getToken(ctx),
+        "GET",
+        `/sites/${siteId}/deploys/${deployId}`,
+      );
     },
   });
 
@@ -118,13 +141,19 @@ export default function netlify(rl: RunlinePluginAPI) {
     description: "List deployments for a site",
     inputSchema: {
       siteId: { type: "string", required: true, description: "Site ID" },
-      limit: { type: "number", required: false, description: "Max results (default all)" },
+      limit: {
+        type: "number",
+        required: false,
+        description: "Max results (default all)",
+      },
     },
     async execute(input, ctx) {
       const { siteId, limit } = input as Record<string, unknown>;
       const token = getToken(ctx);
       if (limit) {
-        return apiRequest(token, "GET", `/sites/${siteId}/deploys`, undefined, { per_page: limit });
+        return apiRequest(token, "GET", `/sites/${siteId}/deploys`, undefined, {
+          per_page: limit,
+        });
       }
       return paginate(token, `/sites/${siteId}/deploys`);
     },
@@ -157,13 +186,20 @@ export default function netlify(rl: RunlinePluginAPI) {
   rl.registerAction("site.list", {
     description: "List all sites",
     inputSchema: {
-      limit: { type: "number", required: false, description: "Max results (default all)" },
+      limit: {
+        type: "number",
+        required: false,
+        description: "Max results (default all)",
+      },
     },
     async execute(input, ctx) {
       const token = getToken(ctx);
       const limit = (input as Record<string, unknown>)?.limit;
       if (limit) {
-        return apiRequest(token, "GET", "/sites", undefined, { filter: "all", per_page: limit });
+        return apiRequest(token, "GET", "/sites", undefined, {
+          filter: "all",
+          per_page: limit,
+        });
       }
       return paginate(token, "/sites", { filter: "all" });
     },

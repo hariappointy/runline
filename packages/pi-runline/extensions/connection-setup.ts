@@ -51,13 +51,13 @@ function connectionFor(
   return connections.find((c) => c.plugin === plugin);
 }
 
-function isSchemaEmpty(schema: PluginSummary["connectionConfigSchema"]): boolean {
+function isSchemaEmpty(
+  schema: PluginSummary["connectionConfigSchema"],
+): boolean {
   return !schema || Object.keys(schema).length === 0;
 }
 
-function envOrSchemaDefault(
-  field: ConnectionSchemaField,
-): string | undefined {
+function envOrSchemaDefault(field: ConnectionSchemaField): string | undefined {
   if (field.env && process.env[field.env]) return process.env[field.env];
   if (field.default !== undefined) return String(field.default);
   return undefined;

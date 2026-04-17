@@ -45,7 +45,13 @@ async function paginateAll(
   const q = { ...qs };
 
   while (true) {
-    const data = (await apiRequest(token, "GET", endpoint, undefined, q)) as Record<string, unknown>;
+    const data = (await apiRequest(
+      token,
+      "GET",
+      endpoint,
+      undefined,
+      q,
+    )) as Record<string, unknown>;
     const items = (data.items as unknown[]) ?? [];
     results.push(...items);
     if (!data.next_page_token) break;
@@ -54,7 +60,9 @@ async function paginateAll(
   return results;
 }
 
-function getToken(ctx: { connection: { config: Record<string, unknown> } }): string {
+function getToken(ctx: {
+  connection: { config: Record<string, unknown> };
+}): string {
   return ctx.connection.config.apiKey as string;
 }
 
@@ -78,9 +86,21 @@ export default function circleci(rl: RunlinePluginAPI) {
   rl.registerAction("pipeline.get", {
     description: "Get a specific pipeline by number",
     inputSchema: {
-      vcs: { type: "string", required: true, description: "VCS type: github or bitbucket" },
-      projectSlug: { type: "string", required: true, description: "Project slug (org/repo)" },
-      pipelineNumber: { type: "number", required: true, description: "Pipeline number" },
+      vcs: {
+        type: "string",
+        required: true,
+        description: "VCS type: github or bitbucket",
+      },
+      projectSlug: {
+        type: "string",
+        required: true,
+        description: "Project slug (org/repo)",
+      },
+      pipelineNumber: {
+        type: "number",
+        required: true,
+        description: "Pipeline number",
+      },
     },
     async execute(input, ctx) {
       const { vcs, projectSlug, pipelineNumber } = input as {
@@ -99,13 +119,32 @@ export default function circleci(rl: RunlinePluginAPI) {
   rl.registerAction("pipeline.list", {
     description: "List pipelines for a project",
     inputSchema: {
-      vcs: { type: "string", required: true, description: "VCS type: github or bitbucket" },
-      projectSlug: { type: "string", required: true, description: "Project slug (org/repo)" },
-      branch: { type: "string", required: false, description: "Filter by branch" },
-      limit: { type: "number", required: false, description: "Max results (omit for all)" },
+      vcs: {
+        type: "string",
+        required: true,
+        description: "VCS type: github or bitbucket",
+      },
+      projectSlug: {
+        type: "string",
+        required: true,
+        description: "Project slug (org/repo)",
+      },
+      branch: {
+        type: "string",
+        required: false,
+        description: "Filter by branch",
+      },
+      limit: {
+        type: "number",
+        required: false,
+        description: "Max results (omit for all)",
+      },
     },
     async execute(input, ctx) {
-      const { vcs, projectSlug, branch, limit } = (input ?? {}) as Record<string, unknown>;
+      const { vcs, projectSlug, branch, limit } = (input ?? {}) as Record<
+        string,
+        unknown
+      >;
       const token = getToken(ctx);
       const endpoint = `/project/${vcs}/${encodeSlug(projectSlug as string)}/pipeline`;
       const qs: Record<string, unknown> = {};
@@ -113,7 +152,13 @@ export default function circleci(rl: RunlinePluginAPI) {
 
       if (limit) {
         qs.limit = limit;
-        const data = (await apiRequest(token, "GET", endpoint, undefined, qs)) as Record<string, unknown>;
+        const data = (await apiRequest(
+          token,
+          "GET",
+          endpoint,
+          undefined,
+          qs,
+        )) as Record<string, unknown>;
         return ((data.items as unknown[]) ?? []).slice(0, limit as number);
       }
       return paginateAll(token, endpoint, qs);
@@ -123,13 +168,28 @@ export default function circleci(rl: RunlinePluginAPI) {
   rl.registerAction("pipeline.trigger", {
     description: "Trigger a new pipeline",
     inputSchema: {
-      vcs: { type: "string", required: true, description: "VCS type: github or bitbucket" },
-      projectSlug: { type: "string", required: true, description: "Project slug (org/repo)" },
-      branch: { type: "string", required: false, description: "Branch to build" },
+      vcs: {
+        type: "string",
+        required: true,
+        description: "VCS type: github or bitbucket",
+      },
+      projectSlug: {
+        type: "string",
+        required: true,
+        description: "Project slug (org/repo)",
+      },
+      branch: {
+        type: "string",
+        required: false,
+        description: "Branch to build",
+      },
       tag: { type: "string", required: false, description: "Tag to build" },
     },
     async execute(input, ctx) {
-      const { vcs, projectSlug, branch, tag } = (input ?? {}) as Record<string, unknown>;
+      const { vcs, projectSlug, branch, tag } = (input ?? {}) as Record<
+        string,
+        unknown
+      >;
       const body: Record<string, unknown> = {};
       if (branch) body.branch = branch;
       if (tag) body.tag = tag;

@@ -2,7 +2,11 @@ import type { RunlinePluginAPI } from "runline";
 
 const BASE = "https://api.segment.io/v1";
 
-async function apiRequest(writeKey: string, endpoint: string, body: Record<string, unknown>): Promise<unknown> {
+async function apiRequest(
+  writeKey: string,
+  endpoint: string,
+  body: Record<string, unknown>,
+): Promise<unknown> {
   const res = await fetch(`${BASE}${endpoint}`, {
     method: "POST",
     headers: {
@@ -11,7 +15,8 @@ async function apiRequest(writeKey: string, endpoint: string, body: Record<strin
     },
     body: JSON.stringify(body),
   });
-  if (!res.ok) throw new Error(`Segment error ${res.status}: ${await res.text()}`);
+  if (!res.ok)
+    throw new Error(`Segment error ${res.status}: ${await res.text()}`);
   return res.json();
 }
 
@@ -20,24 +25,39 @@ export default function segment(rl: RunlinePluginAPI) {
   rl.setVersion("0.1.0");
 
   rl.setConnectionSchema({
-    writeKey: { type: "string", required: true, description: "Segment source write key", env: "SEGMENT_WRITE_KEY" },
+    writeKey: {
+      type: "string",
+      required: true,
+      description: "Segment source write key",
+      env: "SEGMENT_WRITE_KEY",
+    },
   });
 
-  const key = (ctx: { connection: { config: Record<string, unknown> } }) => ctx.connection.config.writeKey as string;
+  const key = (ctx: { connection: { config: Record<string, unknown> } }) =>
+    ctx.connection.config.writeKey as string;
 
   rl.registerAction("identify.create", {
     description: "Identify a user (tie user to traits)",
     inputSchema: {
-      userId: { type: "string", required: false, description: "User ID (or anonymousId will be generated)" },
+      userId: {
+        type: "string",
+        required: false,
+        description: "User ID (or anonymousId will be generated)",
+      },
       anonymousId: { type: "string", required: false },
-      traits: { type: "object", required: false, description: "User traits key-value pairs" },
+      traits: {
+        type: "object",
+        required: false,
+        description: "User traits key-value pairs",
+      },
       context: { type: "object", required: false },
       integrations: { type: "object", required: false },
     },
     async execute(input, ctx) {
       const p = (input ?? {}) as Record<string, unknown>;
       const body: Record<string, unknown> = {};
-      if (p.userId) body.userId = p.userId; else body.anonymousId = p.anonymousId ?? crypto.randomUUID();
+      if (p.userId) body.userId = p.userId;
+      else body.anonymousId = p.anonymousId ?? crypto.randomUUID();
       if (p.traits) body.traits = p.traits;
       if (p.context) body.context = p.context;
       if (p.integrations) body.integrations = p.integrations;
@@ -51,14 +71,19 @@ export default function segment(rl: RunlinePluginAPI) {
       event: { type: "string", required: true, description: "Event name" },
       userId: { type: "string", required: false },
       anonymousId: { type: "string", required: false },
-      properties: { type: "object", required: false, description: "Event properties" },
+      properties: {
+        type: "object",
+        required: false,
+        description: "Event properties",
+      },
       context: { type: "object", required: false },
       integrations: { type: "object", required: false },
     },
     async execute(input, ctx) {
       const p = input as Record<string, unknown>;
       const body: Record<string, unknown> = { event: p.event };
-      if (p.userId) body.userId = p.userId; else body.anonymousId = p.anonymousId ?? crypto.randomUUID();
+      if (p.userId) body.userId = p.userId;
+      else body.anonymousId = p.anonymousId ?? crypto.randomUUID();
       if (p.properties) body.properties = p.properties;
       if (p.context) body.context = p.context;
       if (p.integrations) body.integrations = p.integrations;
@@ -79,7 +104,8 @@ export default function segment(rl: RunlinePluginAPI) {
     async execute(input, ctx) {
       const p = input as Record<string, unknown>;
       const body: Record<string, unknown> = { name: p.name };
-      if (p.userId) body.userId = p.userId; else body.anonymousId = p.anonymousId ?? crypto.randomUUID();
+      if (p.userId) body.userId = p.userId;
+      else body.anonymousId = p.anonymousId ?? crypto.randomUUID();
       if (p.properties) body.properties = p.properties;
       if (p.context) body.context = p.context;
       if (p.integrations) body.integrations = p.integrations;
@@ -100,7 +126,8 @@ export default function segment(rl: RunlinePluginAPI) {
     async execute(input, ctx) {
       const p = input as Record<string, unknown>;
       const body: Record<string, unknown> = { groupId: p.groupId };
-      if (p.userId) body.userId = p.userId; else body.anonymousId = p.anonymousId ?? crypto.randomUUID();
+      if (p.userId) body.userId = p.userId;
+      else body.anonymousId = p.anonymousId ?? crypto.randomUUID();
       if (p.traits) body.traits = p.traits;
       if (p.context) body.context = p.context;
       if (p.integrations) body.integrations = p.integrations;

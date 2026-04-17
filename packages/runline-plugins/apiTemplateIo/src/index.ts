@@ -35,7 +35,9 @@ async function apiRequest(
   return res.json();
 }
 
-function getKey(ctx: { connection: { config: Record<string, unknown> } }): string {
+function getKey(ctx: {
+  connection: { config: Record<string, unknown> };
+}): string {
   return ctx.connection.config.apiKey as string;
 }
 
@@ -62,11 +64,19 @@ export default function apiTemplateIo(rl: RunlinePluginAPI) {
   rl.registerAction("template.list", {
     description: "List all templates",
     inputSchema: {
-      format: { type: "string", required: false, description: "Filter by format: JPEG, PNG, or PDF" },
+      format: {
+        type: "string",
+        required: false,
+        description: "Filter by format: JPEG, PNG, or PDF",
+      },
     },
     async execute(input, ctx) {
       const { format } = (input ?? {}) as { format?: string };
-      const templates = (await apiRequest(getKey(ctx), "GET", "/list-templates")) as Array<Record<string, unknown>>;
+      const templates = (await apiRequest(
+        getKey(ctx),
+        "GET",
+        "/list-templates",
+      )) as Array<Record<string, unknown>>;
       if (format) {
         return templates.filter((t) => t.format === format.toUpperCase());
       }
@@ -77,29 +87,60 @@ export default function apiTemplateIo(rl: RunlinePluginAPI) {
   rl.registerAction("image.create", {
     description: "Create an image from a template",
     inputSchema: {
-      templateId: { type: "string", required: true, description: "Image template ID" },
-      overrides: { type: "array", required: false, description: "Array of override objects with template field values" },
+      templateId: {
+        type: "string",
+        required: true,
+        description: "Image template ID",
+      },
+      overrides: {
+        type: "array",
+        required: false,
+        description: "Array of override objects with template field values",
+      },
     },
     async execute(input, ctx) {
-      const { templateId, overrides } = input as { templateId: string; overrides?: unknown[] };
+      const { templateId, overrides } = input as {
+        templateId: string;
+        overrides?: unknown[];
+      };
       const body: Record<string, unknown> = {};
       if (overrides) body.overrides = overrides;
-      return apiRequest(getKey(ctx), "POST", "/create", { template_id: templateId }, body);
+      return apiRequest(
+        getKey(ctx),
+        "POST",
+        "/create",
+        { template_id: templateId },
+        body,
+      );
     },
   });
 
   rl.registerAction("pdf.create", {
     description: "Create a PDF from a template",
     inputSchema: {
-      templateId: { type: "string", required: true, description: "PDF template ID" },
-      properties: { type: "object", required: true, description: "Template properties as key-value pairs" },
+      templateId: {
+        type: "string",
+        required: true,
+        description: "PDF template ID",
+      },
+      properties: {
+        type: "object",
+        required: true,
+        description: "Template properties as key-value pairs",
+      },
     },
     async execute(input, ctx) {
       const { templateId, properties } = input as {
         templateId: string;
         properties: Record<string, unknown>;
       };
-      return apiRequest(getKey(ctx), "POST", "/create", { template_id: templateId }, properties);
+      return apiRequest(
+        getKey(ctx),
+        "POST",
+        "/create",
+        { template_id: templateId },
+        properties,
+      );
     },
   });
 }
