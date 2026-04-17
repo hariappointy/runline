@@ -23,6 +23,12 @@ jobs:
   publish:
     needs: test
     runs-on: ubuntu-latest
+    strategy:
+      # Publish each package in its own job so a failure in one doesn't
+      # silently skip the other.
+      fail-fast: false
+      matrix:
+        package: [runline, pi-runline]
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
@@ -33,9 +39,11 @@ jobs:
           node-version: 22
           registry-url: https://registry.npmjs.org
       - run: bun install
+      # runline itself must be built before publishing; pi-runline has no
+      # build step but runline's dist is fine to rebuild regardless.
       - run: bun --filter runline build
       - name: Publish to npm
-        working-directory: packages/runline
+        working-directory: packages/${{ matrix.package }}
         run: |
           if echo "${{ github.ref_name }}" | grep -qE '(rc|alpha|beta)'; then
             npm publish --tag next --access public

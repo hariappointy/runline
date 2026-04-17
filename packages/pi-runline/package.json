@@ -18,7 +18,7 @@
     "@mariozechner/pi-coding-agent": "*",
     "@mariozechner/pi-tui": "*",
     "@sinclair/typebox": "*",
-    "runline": "*"
+    "runline": ">=0.2.0"
   },
   "author": "michaelliv",
   "license": "MIT"
