@@ -12,8 +12,6 @@ On session start, if the current project has a `.runline/` directory (or one is 
    - `list_runline_actions` — enumerate the action catalog (optionally filtered to one plugin).
    - `execute_runline` — run JavaScript against the runline sandbox. Plugins are globals; `return` surfaces the result.
 
-A skill at `skills/runline/SKILL.md` teaches the agent when to reach for each tool.
-
 ## Configuration
 
 ### Per-project — `.runline/config.json`

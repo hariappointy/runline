@@ -4,10 +4,9 @@
   "description": "Pi extension — injects runline actions and exposes runline as a tool to the agent",
   "type": "commonjs",
   "keywords": ["pi-package"],
-  "files": ["extensions", "skills", "README.md"],
+  "files": ["extensions", "README.md"],
   "pi": {
-    "extensions": ["extensions/runline-context"],
-    "skills": ["skills"]
+    "extensions": ["extensions/runline-context"]
   },
   "scripts": {
     "build": "echo 'no build'",
