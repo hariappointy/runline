@@ -1,5 +1,5 @@
 import type { Component, TUI } from "@mariozechner/pi-tui";
-import { fuzzyFilter, Input, Text } from "@mariozechner/pi-tui";
+import { fuzzyFilter, Input } from "@mariozechner/pi-tui";
 import type { Theme } from "@mariozechner/pi-coding-agent";
 
 export interface PluginPickerItem {
@@ -206,5 +206,3 @@ export function createPluginPickerFactory(
   };
 }
 
-// Re-export Text so the extension can render a done message if needed.
-export { Text };
