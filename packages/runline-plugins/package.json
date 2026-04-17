@@ -1,0 +1,16 @@
+{
+  "name": "runline-plugins",
+  "version": "0.1.0",
+  "description": "Built-in plugins bundled with runline",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc --noCheck"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.0"
+  },
+  "peerDependencies": {
+    "runline": "*"
+  }
+}

@@ -341,7 +341,7 @@ export default function orders(rl: RunlinePluginAPI) {
 
 Key points: `execute` runs **outside** the sandbox with full Node.js access (fetch, fs, etc). The sandbox can only call your actions through the proxy. `ctx.connection.config` holds the resolved config with env var overrides applied.
 
-See [plugins/](plugins/) for 188 real-world examples.
+See [`packages/runline-plugins/`](packages/runline-plugins) for 188 real-world examples.
 
 ## Sandbox
 
@@ -416,11 +416,13 @@ Env vars override config values. Plugins declare env var names in their connecti
 
 ## Development
 
+Runline is a bun workspace monorepo: `packages/runline` (library + CLI), `packages/runline-plugins` (188 built-in plugins, bundled into runline's dist at build time), and `packages/pi-runline` (pi extension that exposes runline to agents).
+
 ```bash
-npm install
-npm run dev -- exec 'return 1 + 2'
-npm test
-npm run check
+bun install
+bun --filter runline dev -- exec 'return 1 + 2'
+bun --filter runline test
+bun run check
 ```
 
 ## How It Relates to dripline

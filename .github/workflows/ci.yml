@@ -11,11 +11,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: oven-sh/setup-bun@v2
         with:
-          node-version: 22
-      - run: npm install
-      - run: npm install -g tsx
-      - run: npm run build
-      - name: Run tests
-        run: tsx --test src/tests/**/*.test.ts
+          bun-version: latest
+      - run: bun install
+      - run: bun --filter runline build
+      - run: bun --filter runline test

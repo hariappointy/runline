@@ -1,4 +1,31 @@
+# Logs
+*.log
+
+# Dependencies
 node_modules/
-dist/
-.runline/
+
+# TypeScript
 *.tsbuildinfo
+
+# Build output
+dist
+
+# Bun (lockfile IS committed for reproducible installs; only ignore the legacy binary format)
+bun.lockb
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.idea/
+.vscode/
+*.swp
+
+# runline local workspaces
+.runline/
+
+# dotenv
+.env
+.env.local
+.env.*.local
