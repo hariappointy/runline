@@ -435,7 +435,7 @@ The [`pi-runline`](packages/pi-runline) package is a [pi](https://github.com/mar
 It ships with `/runline-plugins`, a fuzzy multi-select picker for choosing which of the 188 plugins the agent should see, plus a guided credential prompt for the ones you enable.
 
 ```bash
-pi install pi-runline
+pi install npm:pi-runline
 # then in any pi session inside a project with .runline/
 /runline-plugins
 ```
