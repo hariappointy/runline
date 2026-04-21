@@ -102,16 +102,39 @@ export class Runline {
 
   /**
    * Load runline from a project directory.
-   * Discovers .runline/ config and installed plugins, just like the CLI.
+   *
+   * Discovers the `.runline/` config and registers:
+   *   - every plugin dropped into `.runline/plugins/`,
+   *   - every plugin listed in `.runline/plugins.json`,
+   *   - every plugin in `~/.runline/plugins/`,
+   *   - and — from the 188 builtins shipped with the package — only
+   *     the ones named in `config.connections[].plugin`.
+   *
+   * Gating the builtins keeps `runline.actions()` scoped to what the
+   * project actually configured. Without this, a project with a
+   * single connection would still expose every bundled action to an
+   * agent, which is both noisy and a privacy problem (the agent sees
+   * surface area it has no credentials for).
+   *
+   * `options.builtinDir` is a test-only hook; production callers
+   * should rely on the default path to the bundled plugins.
+   *
    * Fully self-contained — does not mutate global state.
    */
-  static async fromProject(cwd?: string): Promise<Runline | null> {
+  static async fromProject(
+    cwd?: string,
+    options: { builtinDir?: string } = {},
+  ): Promise<Runline | null> {
     const dir = cwd ?? process.cwd();
     const configDir = findRunlineDir(dir);
     if (!configDir) return null;
 
     const config = loadConfigFrom(configDir);
-    const plugins = await discoverPlugins(configDir);
+    const builtinAllowlist = new Set(config.connections.map((c) => c.plugin));
+    const plugins = await discoverPlugins(configDir, {
+      builtinAllowlist,
+      builtinDir: options.builtinDir,
+    });
 
     const rl = new Runline({
       connections: config.connections,

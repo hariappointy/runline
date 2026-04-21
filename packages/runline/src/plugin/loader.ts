@@ -148,12 +148,40 @@ export async function loadPluginsFromConfig(
   return plugins;
 }
 
+export interface DiscoverOptions {
+  /**
+   * When supplied, only built-in plugins whose name is in this set
+   * are loaded. Plugins discovered in the project dir, `plugins.json`,
+   * or `~/.runline/plugins` are always loaded — users put them there
+   * deliberately — but the 188 bundled builtins are gated so agents
+   * don't see every possible action regardless of configuration.
+   *
+   * Omit to load every builtin (CLI default: `runline actions` etc.
+   * surfaces the full catalog).
+   */
+  builtinAllowlist?: Set<string> | null;
+
+  /**
+   * Override the directory where bundled plugins live. Default is
+   * `<loader>/../plugins`, which resolves to `dist/plugins/` at
+   * runtime. Tests set this so they can exercise allowlist logic
+   * without depending on the real bundled catalog.
+   */
+  builtinDir?: string;
+}
+
+/** Default path to the bundled plugin directory. */
+export function defaultBuiltinDir(): string {
+  return join(__dirname, "..", "plugins");
+}
+
 /**
  * Discover and return all plugins from a config directory and global dir.
  * Does NOT mutate any global state.
  */
 export async function discoverPlugins(
   configDir?: string | null,
+  options: DiscoverOptions = {},
 ): Promise<PluginDef[]> {
   const loaded = new Set<string>();
   const result: PluginDef[] = [];
@@ -178,10 +206,14 @@ export async function discoverPlugins(
   const globalPlugins = await loadFromDirectory(globalDir);
   for (const p of globalPlugins) addIfNew(p);
 
-  // Built-in plugins shipped with the package
-  const builtinDir = join(__dirname, "..", "plugins");
+  const builtinDir = options.builtinDir ?? defaultBuiltinDir();
   const builtinPlugins = await loadFromDirectory(builtinDir);
-  for (const p of builtinPlugins) addIfNew(p);
+  for (const p of builtinPlugins) {
+    if (options.builtinAllowlist && !options.builtinAllowlist.has(p.name)) {
+      continue;
+    }
+    addIfNew(p);
+  }
 
   return result;
 }
