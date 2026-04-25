@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { createRequire } from "node:module";
 import {
   getQuickJS,
   type QuickJSContext,
@@ -302,10 +304,26 @@ function formatError(cause: unknown): string {
   return String(cause);
 }
 
+// MiniSearch UMD bundle, loaded once and inlined into the sandbox source.
+// UMD assigns to globalThis.MiniSearch when run in a non-CJS / non-AMD env
+// (which QuickJS is), so we just paste the file in and use the global.
+const __minisearchSource = (() => {
+  const req = createRequire(import.meta.url);
+  const pkg = req.resolve("minisearch/package.json");
+  const path = pkg.replace(/package\.json$/, "dist/umd/index.js");
+  return readFileSync(path, "utf8");
+})();
+
+interface HelpInput {
+  type: string;
+  required: boolean;
+  description?: string;
+}
+
 interface HelpEntry {
   action: string;
   description?: string;
-  inputs: Record<string, string>;
+  inputs: Record<string, HelpInput>;
 }
 
 function buildHelpData(plugins: PluginDef[]): Record<string, HelpEntry[]> {
@@ -317,7 +335,11 @@ function buildHelpData(plugins: PluginDef[]): Record<string, HelpEntry[]> {
       inputs: Object.fromEntries(
         Object.entries(a.inputSchema ?? {}).map(([k, v]) => [
           k,
-          `${v.type}${v.required ? " (required)" : ""}${v.description ? " — " + v.description : ""}`,
+          {
+            type: v.type,
+            required: !!v.required,
+            description: v.description,
+          },
         ]),
       ),
     }));
@@ -350,15 +372,14 @@ const __fmt = (v) => {
   try { return JSON.stringify(v); } catch { return String(v); }
 };
 
+// Inlined MiniSearch UMD — attaches MiniSearch to globalThis inside the sandbox.
+${__minisearchSource}
+
 const __help = ${JSON.stringify(helpData)};
 
 const __makeProxy = (path = []) => new Proxy(() => undefined, {
   get(_t, prop) {
     if (prop === 'then' || typeof prop === 'symbol') return undefined;
-    if (prop === 'help') {
-      const pluginName = path[0];
-      return () => pluginName && __help[pluginName] ? __help[pluginName] : __help;
-    }
     return __makeProxy([...path, String(prop)]);
   },
   apply(_t, _this, args) {
@@ -368,8 +389,126 @@ const __makeProxy = (path = []) => new Proxy(() => undefined, {
       .then((raw) => raw === undefined ? undefined : JSON.parse(raw));
   },
 });
-const actions = __makeProxy();
-const help = () => __help;
+
+// Flat index of every "plugin.action" path → { plugin, entry }
+const __index = (() => {
+  const out = Object.create(null);
+  for (const plugin of Object.keys(__help)) {
+    for (const e of __help[plugin]) {
+      out[plugin + '.' + e.action] = { plugin, entry: e };
+    }
+  }
+  return out;
+})();
+
+const __formatSignature = (plugin, entry) => {
+  const fields = Object.entries(entry.inputs || {})
+    .map(([k, v]) => k + (v.required ? '' : '?') + ': ' + v.type)
+    .join(', ');
+  return plugin + '.' + entry.action + (fields ? '({ ' + fields + ' })' : '()');
+};
+
+// Build a MiniSearch index over every action path. Indexed at sandbox
+// startup, queried by actions.find().
+const __search = (() => {
+  const docs = [];
+  for (const path of Object.keys(__index)) {
+    const { plugin, entry } = __index[path];
+    docs.push({
+      id: path,
+      path,
+      plugin,
+      action: entry.action,
+      description: entry.description || '',
+    });
+  }
+  const ms = new MiniSearch({
+    fields: ['path', 'plugin', 'action', 'description'],
+    storeFields: ['path', 'description'],
+    searchOptions: {
+      prefix: true,
+      fuzzy: 0.2,
+      boost: { path: 3, action: 2, plugin: 2 },
+    },
+  });
+  ms.addAll(docs);
+  return ms;
+})();
+
+const __actionsApi = {
+  list(plugin) {
+    const paths = Object.keys(__index);
+    return plugin ? paths.filter((p) => p.startsWith(plugin + '.')) : paths;
+  },
+  describe(path) {
+    const hit = __index[path];
+    if (!hit) {
+      const near = __actionsApi.find(path, 3);
+      const hint = near.length ? ' Did you mean: ' + near.map((n) => n.path).join(', ') + '?' : '';
+      throw new Error('Unknown action: ' + path + '.' + hint);
+    }
+    return {
+      path,
+      plugin: hit.plugin,
+      action: hit.entry.action,
+      description: hit.entry.description,
+      signature: __formatSignature(hit.plugin, hit.entry),
+      inputs: hit.entry.inputs,
+    };
+  },
+  find(query, limit = 5) {
+    const q = String(query || '').trim();
+    if (!q) return [];
+    return __search.search(q).slice(0, limit).map((r) => ({
+      path: r.path,
+      description: r.description || undefined,
+      score: r.score,
+    }));
+  },
+  check(path, args) {
+    const hit = __index[path];
+    if (!hit) {
+      const near = __actionsApi.find(path, 3).map((n) => n.path);
+      return { ok: false, error: 'Unknown action: ' + path, suggestions: near };
+    }
+    const inputs = hit.entry.inputs || {};
+    const provided = args && typeof args === 'object' ? args : {};
+    const missing = [];
+    const unknown = [];
+    const typeErrors = [];
+    for (const [k, spec] of Object.entries(inputs)) {
+      if (spec.required && !(k in provided)) missing.push(k);
+    }
+    for (const k of Object.keys(provided)) {
+      if (!(k in inputs)) unknown.push(k);
+      else {
+        const expected = inputs[k].type;
+        const actual = Array.isArray(provided[k]) ? 'array' : typeof provided[k];
+        if (expected !== actual && !(provided[k] === null || provided[k] === undefined)) {
+          typeErrors.push({ field: k, expected, actual });
+        }
+      }
+    }
+    return {
+      ok: missing.length === 0 && unknown.length === 0 && typeErrors.length === 0,
+      missing,
+      unknown,
+      typeErrors,
+      signature: __formatSignature(hit.plugin, hit.entry),
+    };
+  },
+};
+
+// Unknown keys (plugin names) fall through to the call proxy, so
+// actions.github.issue.create(...) keeps working alongside the explicit
+// list/find/describe/check/help helpers.
+const actions = new Proxy(__actionsApi, {
+  get(target, prop) {
+    if (prop in target || typeof prop === 'symbol') return target[prop];
+    return __makeProxy([String(prop)]);
+  },
+});
+
 ${pluginNames.map((n) => `const ${n} = __makeProxy(['${n}']);`).join("\n")}
 
 const console = {

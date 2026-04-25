@@ -281,8 +281,11 @@ runline exec '
 '
 
 # Discover actions from inside the sandbox
-runline exec 'return brandfetch.help()'
-runline exec 'return help()'
+runline exec 'return actions.list()'
+runline exec 'return actions.list("brandfetch")'
+runline exec 'return actions.find("create issue")'
+runline exec 'return actions.describe("github.issue.create")'
+runline exec 'return actions.check("github.issue.create", { owner: "a" })'
 
 # Output as JSON (for agents)
 runline exec 'return await github.repo.list({ owner: "torvalds" })' --json
@@ -439,10 +442,9 @@ bun run check
 
 ## Pi integration
 
-The [`pi-runline`](packages/pi-runline) package is a [pi](https://github.com/mariozechner/pi) extension that plugs runline into coding agents as two native tools:
+The [`pi-runline`](packages/pi-runline) package is a [pi](https://github.com/mariozechner/pi) extension that plugs runline into coding agents as a single native tool:
 
-- **`list_runline_actions`** — enumerate the action catalog (optionally filtered to one plugin).
-- **`execute_runline`** — run JavaScript in the runline sandbox.
+- **`execute_runline`** — run JavaScript in the runline sandbox. Discovery happens inside the sandbox via `actions.list / find / describe / check`, so the agent never needs a separate listing tool.
 
 It ships with `/runline-plugins`, a fuzzy multi-select picker for choosing which of the 188 plugins the agent should see, plus a guided credential prompt for the ones you enable.
 

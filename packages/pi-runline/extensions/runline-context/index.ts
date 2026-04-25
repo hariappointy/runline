@@ -10,16 +10,6 @@ import {
   savePiPlugins,
 } from "../runline-resolve.js";
 
-type ActionEntry = {
-  plugin: string;
-  action: string;
-  description?: string;
-  inputSchema?: Record<
-    string,
-    { type: string; required?: boolean; description?: string }
-  >;
-};
-
 function filterByAllowlist<T extends { name?: string; plugin?: string }>(
   items: T[],
   allow: string[] | undefined,
@@ -27,34 +17,6 @@ function filterByAllowlist<T extends { name?: string; plugin?: string }>(
   if (!allow) return [];
   const set = new Set(allow);
   return items.filter((i) => set.has((i.name ?? i.plugin) as string));
-}
-
-function formatActions(actions: ActionEntry[]): string {
-  const grouped = new Map<string, ActionEntry[]>();
-  for (const a of actions) {
-    const list = grouped.get(a.plugin) ?? [];
-    list.push(a);
-    grouped.set(a.plugin, list);
-  }
-
-  const lines: string[] = [];
-  for (const [plugin, entries] of grouped) {
-    lines.push(`### ${plugin}`);
-    for (const a of entries) {
-      const inputs = a.inputSchema
-        ? Object.entries(a.inputSchema)
-            .map(([k, v]) => `${k}: ${v.type}${v.required ? "" : "?"}`)
-            .join(", ")
-        : "";
-      const sig = inputs
-        ? `\`${plugin}.${a.action}({ ${inputs} })\``
-        : `\`${plugin}.${a.action}()\``;
-      const desc = a.description ? ` — ${a.description}` : "";
-      lines.push(`- ${sig}${desc}`);
-    }
-    lines.push("");
-  }
-  return lines.join("\n");
 }
 
 const runlineCache = new Map<string, Promise<Runline>>();
@@ -157,21 +119,39 @@ export default function (pi: ExtensionAPI) {
       );
 
     if (!alreadyInjected) {
-      const header =
-        "## Runline actions\n\n" +
-        "This project has runline installed. You have two tools:\n" +
-        "- `list_runline_actions` — show the full action catalog with input schemas\n" +
-        "- `execute_runline` — run JavaScript in a sandbox where each plugin is a top-level global. " +
+      const pluginList = plugins
+        .map((p) => `\`${p.name}\` (${p.actions.length})`)
+        .join(", ");
+
+      const content =
+        "## Runline\n\n" +
+        `This project has runline installed with **${plugins.length} plugins, ${actions.length} actions**. ` +
+        "Use the `execute_runline` tool to run JavaScript in a sandbox where each plugin is a top-level global. " +
         "Chain actions, await results, return a value.\n\n" +
-        `**${plugins.length} plugins, ${actions.length} actions available.**\n\n` +
-        "Example:\n" +
+        `**Enabled plugins:** ${pluginList}\n\n` +
+        "### Discovering actions\n\n" +
+        "Inside the sandbox, an `actions` object lets you explore the catalog without leaving `execute_runline`. " +
+        "Prefer this over guessing — it's how you find the right action and verify call shapes before invoking.\n\n" +
+        "```js\n" +
+        'actions.list()                  // every "plugin.action" path\n' +
+        'actions.list("github")          // just one plugin\n' +
+        'actions.find("create issue")    // ranked fuzzy search — [{path, description, score}]\n' +
+        'actions.describe("github.issue.create")\n' +
+        "// → { path, plugin, action, description, signature, inputs }\n" +
+        'actions.check("github.issue.create", { owner: "a" })\n' +
+        "// → { ok, missing, unknown, typeErrors, signature }   (does NOT call the action)\n" +
+        "```\n\n" +
+        "Unknown paths throw with did-you-mean suggestions, so typos are self-correcting. " +
+        "Recommended flow: `find` → `describe` → `check` → call.\n\n" +
+        "### Calling actions\n\n" +
         "```js\n" +
         'return await github.issue.create({ owner: "acme", repo: "api", title: "Bug" })\n' +
-        "```\n\n";
+        "```\n\n" +
+        "Plugin globals (`github`, `slack`, ...) and `actions.<plugin>.<action>(...)` both work — same call.\n";
 
       pi.sendMessage({
         customType: "runline-context",
-        content: header + formatActions(actions),
+        content,
         display: true,
       });
     }
@@ -205,9 +185,10 @@ export default function (pi: ExtensionAPI) {
       const rl = await getRunline(ctx.cwd);
       // Note: the sandbox currently exposes every registered plugin as a
       // global. The allowlist drives what the agent is told about in its
-      // injected context and list_runline_actions output, which is the only
-      // practical route for the agent to know what exists. Plumbing the
-      // allowlist through to the sandbox globals is a future improvement.
+      // injected context (and what `actions.list()` surfaces in practice,
+      // since the agent only knows to look for what was advertised).
+      // Plumbing the allowlist through to the sandbox registry is a
+      // future improvement.
       const result = await rl.execute(params.code);
 
       const logs = result.logs?.length
@@ -230,38 +211,6 @@ export default function (pi: ExtensionAPI) {
       return {
         content: [{ type: "text", text: value + logs }],
         details: result,
-      };
-    },
-  });
-
-  pi.registerTool({
-    name: "list_runline_actions",
-    label: "Runline Actions",
-    description:
-      "List every available runline action with its plugin, description, and input schema.",
-    promptSnippet:
-      "Discover runline plugin actions and their input shapes before calling execute_runline",
-    parameters: Type.Object({
-      plugin: Type.Optional(
-        Type.String({
-          description: "Filter to a single plugin (e.g. 'github')",
-        }),
-      ),
-    }),
-    async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
-      const rl = await getRunline(ctx.cwd);
-      const runlineDir = findRunlineDir(ctx.cwd);
-      const allow = runlineDir
-        ? loadExtConfig(runlineDir).piPlugins
-        : undefined;
-      let actions = filterByAllowlist(rl.actions(), allow);
-      if (params.plugin) {
-        actions = actions.filter((a) => a.plugin === params.plugin);
-      }
-      const text = formatActions(actions);
-      return {
-        content: [{ type: "text", text: text || "No actions enabled." }],
-        details: { actions },
       };
     },
   });
