@@ -6,6 +6,7 @@ import { promptForCredentials } from "../connection-setup.js";
 import { createPluginPickerFactory } from "../plugin-picker.js";
 import {
   findRunlineDir,
+  getConnectedPluginNames,
   loadExtConfig,
   savePiPlugins,
 } from "../runline-resolve.js";
