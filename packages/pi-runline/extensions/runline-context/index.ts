@@ -286,4 +286,70 @@ export default function (pi: ExtensionAPI) {
       }
     },
   });
+
+  pi.registerCommand("runline-reconfigure", {
+    description:
+      "Re-enter credentials for an already-configured runline plugin",
+    handler: async (_args, ctx) => {
+      if (!ctx.hasUI) return;
+
+      const runlineDir = findRunlineDir(ctx.cwd);
+      if (!runlineDir) {
+        ctx.ui.notify("no .runline/ directory — run `runline init`", "error");
+        return;
+      }
+
+      let allPlugins: Awaited<ReturnType<typeof discoverPlugins>>;
+      try {
+        allPlugins = await discoverPlugins(runlineDir);
+      } catch (err) {
+        ctx.ui.notify(
+          `runline failed to load plugins: ${(err as Error).message}`,
+          "error",
+        );
+        return;
+      }
+
+      // Only offer plugins that have a credential schema. The picker is
+      // not initially-selected; the user toggles the one(s) they want to
+      // re-enter creds for.
+      const candidates = allPlugins.filter(
+        (p) =>
+          p.connectionConfigSchema &&
+          Object.keys(p.connectionConfigSchema).length > 0,
+      );
+      if (candidates.length === 0) {
+        ctx.ui.notify("no plugins with credentials available", "info");
+        return;
+      }
+
+      const items = candidates.map((p) => ({
+        name: p.name,
+        actionCount: p.actions.length,
+      }));
+      const result = await ctx.ui.custom(createPluginPickerFactory(items, []), {
+        overlay: true,
+        overlayOptions: { width: "80%", maxHeight: "80%" },
+      });
+
+      if (!result.selected || result.selected.length === 0) {
+        ctx.ui.notify("reconfigure cancelled", "info");
+        return;
+      }
+
+      const saved = await promptForCredentials(
+        ctx,
+        runlineDir,
+        allPlugins,
+        result.selected,
+        { force: true },
+      );
+      ctx.ui.notify(
+        saved.length > 0
+          ? `credentials updated for ${saved.length} plugin(s)`
+          : "no credentials updated",
+        "info",
+      );
+    },
+  });
 }
